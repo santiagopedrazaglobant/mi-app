@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../db/connect';
 import Cliente from '../db/models/Cliente';
 import Prestamo from '../db/models/Prestamo';
-import Pago from '../db/models/Pago'; // <-- AGREGAR ESTA IMPORTACIÓN
+import Pago from '../db/models/Pago';
+
+// Configuración de segmento de ruta - REEMPLAZA export const config
+export const dynamic = 'force-dynamic'; // Para tener datos dinámicos
+export const runtime = 'nodejs'; // Ejecutar en Node.js runtime
+export const maxDuration = 30; // Tiempo máximo de ejecución (segundos)
 
 // GET /api/clientes - Obtener todos los clientes
 export async function GET(request: NextRequest) {
@@ -325,10 +330,15 @@ export async function DELETE(request: NextRequest) {
     // Leer el body para verificar si queremos borrar todo
     let deleteAll = false;
     try {
-      const body = await request.json();
-      deleteAll = body.deleteAll || false;
+      // Intentar leer el body como JSON
+      const bodyText = await request.text();
+      if (bodyText) {
+        const body = JSON.parse(bodyText);
+        deleteAll = body.deleteAll || false;
+      }
     } catch (e) {
-      // Si no hay body, continuar sin deleteAll
+      // Si no hay body o no es JSON válido, continuar sin deleteAll
+      console.log('No se pudo parsear el body, usando deleteAll = false');
     }
 
     if (!id) {
@@ -411,9 +421,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// Configuración de los métodos HTTP permitidos
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
