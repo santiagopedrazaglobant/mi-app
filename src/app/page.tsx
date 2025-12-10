@@ -118,7 +118,7 @@ class SistemaPrestamosService {
               nombre: clienteData.nombre,
               apellido: clienteData.apellido,
               cedula: clienteData.cedula,
-              telefono: clienteData.telefono,
+              telefono: clienteData.telefono, 
               email: clienteData.email || '',
               direccion: clienteData.direccion || '',
               montoPrestamo: 0,
