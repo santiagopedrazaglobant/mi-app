@@ -4,12 +4,12 @@ import Cliente from '../db/models/Cliente';
 import Prestamo from '../db/models/Prestamo';
 import Pago from '../db/models/Pago';
 
-// Configuración de segmento de ruta - REEMPLAZA export const config
-export const dynamic = 'force-dynamic'; // Para tener datos dinámicos
-export const runtime = 'nodejs'; // Ejecutar en Node.js runtime
-export const maxDuration = 30; // Tiempo máximo de ejecución (segundos)
+// Configuración de segmento de ruta
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const maxDuration = 30;
 
-// GET /api/clientes - Obtener todos los clientes
+// GET /api/clientes - Obtener todos los clientes con filtros
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -20,8 +20,11 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100');
     const skip = (page - 1) * limit;
+    const fechaInicio = searchParams.get('fechaInicio');
+    const fechaFin = searchParams.get('fechaFin');
+    const filtro = searchParams.get('filtro');
 
-    // Construir query
+    // Construir query básico
     let query: any = {};
     
     if (estado && estado !== 'todos') {
@@ -35,6 +38,42 @@ export async function GET(request: NextRequest) {
         { cedula: { $regex: search, $options: 'i' } },
         { telefono: { $regex: search, $options: 'i' } }
       ];
+    }
+
+    // 🔥 NUEVO: Filtro por fecha de próximo pago
+    if (filtro === 'fechaPago' && fechaInicio && fechaFin) {
+      try {
+        // Primero buscar préstamos con fechaProximoPago en el rango
+        const prestamosFiltrados = await Prestamo.find({
+          fechaProximoPago: {
+            $gte: new Date(fechaInicio),
+            $lte: new Date(fechaFin)
+          }
+        }).select('cliente').lean();
+
+        // Obtener IDs únicos de clientes
+        const clienteIds = [...new Set(prestamosFiltrados.map(p => p.cliente.toString()))];
+        
+        if (clienteIds.length > 0) {
+          // Filtrar clientes por los IDs encontrados
+          query._id = { $in: clienteIds };
+        } else {
+          // Si no hay préstamos en el rango, retornar array vacío
+          return NextResponse.json({
+            success: true,
+            data: [],
+            pagination: {
+              page: 1,
+              limit,
+              total: 0,
+              pages: 0
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error en filtro por fecha:', error);
+        // Continuar sin filtro de fecha si hay error
+      }
     }
 
     // Obtener clientes con paginación
@@ -75,19 +114,41 @@ export async function GET(request: NextRequest) {
           }
         }
         
+        // Obtener el préstamo principal (el más reciente)
+        const prestamoPrincipal = prestamos.length > 0 
+          ? prestamos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+          : null;
+        
         // Calcular saldos
         const saldoTotal = prestamos.reduce((sum, p) => sum + (p.saldoPendiente || 0), 0);
         const montoTotalPrestado = prestamos.reduce((sum, p) => sum + (p.montoPrestamo || 0), 0);
+        const interesesAcumuladosTotal = prestamos.reduce((sum, p) => sum + (p.interesesAcumulados || 0), 0);
         
         return {
           ...cliente,
-          prestamosActivos: prestamosPendientes + prestamosEnMora, // Suma de pendientes y en mora
+          prestamosActivos: prestamosPendientes + prestamosEnMora,
           prestamosPagados,
           prestamosEnMora,
           saldoTotal,
           totalPrestamos: prestamos.length,
           montoTotalPrestado,
-          estado: estadoCalculado
+          interesesAcumuladosTotal,
+          estado: estadoCalculado,
+          // 🔥 NUEVO: Campos del préstamo principal
+          montoPrestamo: prestamoPrincipal?.montoPrestamo || 0,
+          tasaInteres: prestamoPrincipal?.tasaInteres || 0,
+          numeroCuotas: prestamoPrincipal?.numeroCuotas || 0,
+          fechaPrestamo: prestamoPrincipal?.fechaPrestamo || cliente.createdAt,
+          fechaProximoPago: prestamoPrincipal?.fechaProximoPago || cliente.createdAt,
+          cuotasPagadas: prestamoPrincipal?.cuotasPagadas || 0,
+          cuotaMensual: prestamoPrincipal?.cuotaMensual || 0,
+          capitalMensual: prestamoPrincipal?.capitalMensual || 0,
+          interesMensual: prestamoPrincipal?.interesMensual || 0,
+          valor4x1000Mensual: prestamoPrincipal?.valor4x1000Mensual || 0,
+          totalIntereses: prestamoPrincipal?.totalIntereses || 0,
+          total4x1000: prestamoPrincipal?.total4x1000 || 0,
+          saldoPendiente: prestamoPrincipal?.saldoPendiente || 0,
+          interesesAcumulados: prestamoPrincipal?.interesesAcumulados || 0
         };
       })
     );
@@ -245,8 +306,11 @@ export async function POST(request: NextRequest) {
       telefono: data.telefono,
       email: data.email || '',
       direccion: data.direccion || '',
-      estado: 'pendiente', // Estado por defecto
-      prestamosActivos: 0
+      observaciones: data.observaciones || '',
+      estado: 'pendiente',
+      prestamosActivos: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     await nuevoCliente.save();
@@ -290,6 +354,8 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    updateData.updatedAt = new Date();
 
     const clienteActualizado = await Cliente.findByIdAndUpdate(
       id,
@@ -420,4 +486,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-

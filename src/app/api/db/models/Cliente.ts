@@ -1,37 +1,25 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface ICliente extends Document {
-  nombre: string;
-  apellido: string;
-  cedula: string;
-  telefono: string;
-  email?: string;
-  direccion?: string;
-  fechaRegistro: Date;
-  estado: 'pendiente' | 'pagado' | 'mora';
-  prestamosActivos: number;
-}
-
-const ClienteSchema: Schema = new Schema({
+const ClienteSchema = new mongoose.Schema({
   nombre: {
     type: String,
-    required: [true, 'El nombre es obligatorio'],
+    required: [true, 'El nombre es requerido'],
     trim: true
   },
   apellido: {
     type: String,
-    required: [true, 'El apellido es obligatorio'],
+    required: [true, 'El apellido es requerido'],
     trim: true
   },
   cedula: {
     type: String,
-    required: [true, 'La cédula es obligatoria'],
+    required: [true, 'La cédula es requerida'],
     unique: true,
     trim: true
   },
   telefono: {
     type: String,
-    required: [true, 'El teléfono es obligatorio'],
+    required: [true, 'El teléfono es requerido'],
     trim: true
   },
   email: {
@@ -43,9 +31,9 @@ const ClienteSchema: Schema = new Schema({
     type: String,
     trim: true
   },
-  fechaRegistro: {
-    type: Date,
-    default: Date.now
+  observaciones: {
+    type: String,
+    default: ''
   },
   estado: {
     type: String,
@@ -60,7 +48,10 @@ const ClienteSchema: Schema = new Schema({
   timestamps: true
 });
 
-// Índices para búsquedas rápidas
+// Índices para mejor rendimiento
+ClienteSchema.index({ cedula: 1 });
 ClienteSchema.index({ nombre: 1, apellido: 1 });
+ClienteSchema.index({ estado: 1 });
+ClienteSchema.index({ createdAt: -1 });
 
-export default mongoose.models.Cliente || mongoose.model<ICliente>('Cliente', ClienteSchema);
+export default mongoose.models.Cliente || mongoose.model('Cliente', ClienteSchema);

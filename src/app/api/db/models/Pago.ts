@@ -42,12 +42,12 @@ const PagoSchema: Schema = new Schema({
   interesPagado: {
     type: Number,
     required: true,
-    min: 0
+    default: 0
   },
   capitalPagado: {
     type: Number,
     required: true,
-    min: 0
+    default: 0
   },
   valor4x1000Pagado: {
     type: Number,
@@ -57,6 +57,11 @@ const PagoSchema: Schema = new Schema({
     type: String,
     enum: ['Efectivo', 'Transferencia', 'Tarjeta', 'Cheque'],
     default: 'Efectivo'
+  },
+  tipo: {
+    type: String,
+    enum: ['pago_completo', 'abono', 'intereses'],
+    default: 'pago_completo'
   },
   comprobante: {
     type: String,
