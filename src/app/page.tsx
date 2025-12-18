@@ -1146,41 +1146,59 @@ export default function SistemaPrestamosElegante() {
     setClienteSeleccionado(null);
   };
 
-  const abrirModalAbonoIntereses = async (cliente: Cliente) => {
-    setClienteSeleccionado(cliente);
+const abrirModalAbonoIntereses = async (cliente: Cliente) => {
+  // 🔥 CORREGIR: Guardar una copia completa del cliente
+  setClienteSeleccionado({
+    ...cliente,
+    // Asegurar que todos los campos existan
+    id: cliente.id,
+    nombre: cliente.nombre,
+    apellido: cliente.apellido,
+    interesMensual: cliente.interesMensual || 0,
+    interesesAcumulados: cliente.interesesAcumulados || 0
+  });
 
-    // Cargar historial si no existe
-    if (!pagos[cliente.id]) {
-      await cargarHistorialCliente(cliente.id);
-    }
+  // Cargar historial si no existe
+  if (!pagos[cliente.id]) {
+    await cargarHistorialCliente(cliente.id);
+  }
 
-    const interesesSugeridos = cliente.interesMensual || 0;
-    const interesesAcumulados = cliente.interesesAcumulados || 0;
+  const interesesSugeridos = cliente.interesMensual || 0;
+  const interesesAcumulados = cliente.interesesAcumulados || 0;
 
-    let tipoPorDefecto = 'intereses_mensuales';
-    let montoSugerido = interesesSugeridos;
-    let observacionesPorDefecto = 'Pago de intereses mensuales';
+  let tipoPorDefecto = 'intereses_mensuales';
+  let montoSugerido = interesesSugeridos;
+  let observacionesPorDefecto = 'Pago de intereses mensuales';
 
-    if (interesesAcumulados > 0) {
-      tipoPorDefecto = 'intereses_acumulados';
-      montoSugerido = interesesAcumulados;
-      observacionesPorDefecto = 'Pago de intereses acumulados';
-    }
+  if (interesesAcumulados > 0) {
+    tipoPorDefecto = 'intereses_acumulados';
+    montoSugerido = interesesAcumulados;
+    observacionesPorDefecto = 'Pago de intereses acumulados';
+  }
 
-    setFormAbonoIntereses({
-      montoAbono: montoSugerido > 0 ? montoSugerido.toString() : '0',
-      tipo: tipoPorDefecto,
-      observaciones: observacionesPorDefecto,
-      fechaAbono: new Date().toISOString().split('T')[0]
-    });
+  setFormAbonoIntereses({
+    montoAbono: montoSugerido > 0 ? montoSugerido.toString() : '0',
+    tipo: tipoPorDefecto,
+    observaciones: observacionesPorDefecto,
+    fechaAbono: new Date().toISOString().split('T')[0]
+  });
 
-    setIsModalAbonoInteresesOpen(true);
-  };
+  setIsModalAbonoInteresesOpen(true);
+};
 
-  const cerrarModalAbonoIntereses = () => {
-    setIsModalAbonoInteresesOpen(false);
-    setClienteSeleccionado(null);
-  };
+const cerrarModalAbonoIntereses = () => {
+  setIsModalAbonoInteresesOpen(false);
+  // 🔥 NO limpiar clienteSeleccionado aquí
+  // Solo limpiar el formulario
+  setFormAbonoIntereses({
+    montoAbono: '',
+    tipo: 'intereses_mensuales',
+    observaciones: '',
+    fechaAbono: new Date().toISOString().split('T')[0]
+  });
+};
+
+
 
   // Función de búsqueda por fecha de registro
   const buscarPorFechaRegistro = async () => {
@@ -1445,100 +1463,158 @@ export default function SistemaPrestamosElegante() {
     }
   };
 
-  const registrarAbonoIntereses = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const registrarAbonoIntereses = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!clienteSeleccionado) {
-      mostrarError('❌ No hay cliente seleccionado');
+  // 🔥 CORREGIR: Verificar más detalladamente el cliente
+  if (!clienteSeleccionado || !clienteSeleccionado.id) {
+    console.error('❌ Cliente seleccionado inválido:', clienteSeleccionado);
+    mostrarError('❌ Error: No hay cliente válido seleccionado');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setError(null);
+
+    const fechaAbonoReal = formAbonoIntereses.fechaAbono || new Date().toISOString().split('T')[0];
+
+    console.log('📅 Fecha a usar:', fechaAbonoReal);
+    console.log('🔍 Cliente seleccionado:', {
+      id: clienteSeleccionado.id,
+      nombre: clienteSeleccionado.nombre,
+      tieneId: !!clienteSeleccionado.id
+    });
+
+    const monto = parseFloat(formAbonoIntereses.montoAbono);
+    if (!monto || monto <= 0) {
+      mostrarError('❌ Ingresa un monto válido');
+      setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    // NO modificar el tipo automáticamente - usar el que el usuario seleccionó
+    const tipoAbono = formAbonoIntereses.tipo;
+    const observaciones = formAbonoIntereses.observaciones || 
+      (tipoAbono === 'intereses_mensuales' 
+        ? 'Pago de intereses mensuales' 
+        : 'Pago de intereses acumulados');
 
-      const fechaAbonoReal = formAbonoIntereses.fechaAbono || new Date().toISOString().split('T')[0];
+    // 🔥 CORREGIR: Asegurar que el clienteId sea string válido
+    const abonoData = {
+      clienteId: clienteSeleccionado.id.toString(), // Convertir a string explícitamente
+      montoAbono: monto.toString(),
+      tipo: tipoAbono,
+      observaciones: observaciones,
+      fechaAbono: fechaAbonoReal,
+      metodoPago: 'Efectivo' // Agregar campo requerido por backend
+    };
 
-      console.log('📅 Fecha a usar:', fechaAbonoReal);
+    console.log('📤 Enviando abono (JSON):', JSON.stringify(abonoData, null, 2));
+    console.log('📤 Enviando abono (objeto):', abonoData);
 
-      const monto = parseFloat(formAbonoIntereses.montoAbono);
-      if (!monto || monto <= 0) {
-        mostrarError('❌ Ingresa un monto válido');
-        setLoading(false);
-        return;
+    const response = await fetch('/api/abonos-intereses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(abonoData)
+    });
+
+    // 🔥 MEJOR MANEJO DE ERRORES
+    if (!response.ok) {
+      let errorMessage = 'Error al registrar abono';
+      try {
+        const errorData = await response.json();
+        console.error('❌ Error del servidor:', errorData);
+        
+        // Mensajes más específicos
+        if (errorData.camposFaltantes) {
+          errorMessage = `Campos faltantes: ${errorData.camposFaltantes.join(', ')}`;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+        
+        // Mostrar datos recibidos por el servidor para depuración
+        if (errorData.datosRecibidos) {
+          console.error('📊 Datos recibidos por el servidor:', errorData.datosRecibidos);
+        }
+      } catch (e) {
+        const errorText = await response.text();
+        console.error('❌ Error texto crudo:', errorText);
+        errorMessage = `Error ${response.status}: ${response.statusText}`;
       }
+      throw new Error(errorMessage);
+    }
 
-      // Tipo de abono basado en el monto
-      let tipoAbono = formAbonoIntereses.tipo;
-      let observaciones = formAbonoIntereses.observaciones;
+    const result = await response.json();
+    console.log('✅ Resultado abono:', result);
 
-      // Si el monto corresponde a intereses mensuales pero se seleccionó acumulado
-      if (tipoAbono === 'intereses_acumulados' && Math.abs(monto - clienteSeleccionado.interesMensual) < 1) {
-        tipoAbono = 'intereses_mensuales';
-        observaciones = 'Pago de intereses mensuales';
-      }
+    if (!result.success) {
+      throw new Error(result.error || 'Error en la respuesta del servidor');
+    }
 
-      const abonoData = {
-        clienteId: clienteSeleccionado.id,
-        montoAbono: monto.toString(),
-        tipo: tipoAbono,
-        observaciones: observaciones || '',
-        fechaAbono: fechaAbonoReal
-      };
-
-      console.log('📤 Enviando abono:', abonoData);
-
-      const response = await fetch('/api/abonos-intereses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(abonoData)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Error al registrar abono');
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || 'Error en la respuesta del servidor');
-      }
-
-      // Recargar el historial del cliente
-      await cargarHistorialCliente(clienteSeleccionado.id);
-
-      const clienteActualizado = await SistemaPrestamosService.obtenerClientePorId(clienteSeleccionado.id);
-
+    // 🔥 ACTUALIZAR EL CLIENTE CON LOS DATOS DEL BACKEND
+    if (result.data && result.data.prestamo) {
       setClientes(prev =>
-        prev.map(cliente =>
-          cliente.id === clienteSeleccionado.id ? clienteActualizado : cliente
-        )
+        prev.map(cliente => {
+          if (cliente.id === clienteSeleccionado.id) {
+            return {
+              ...cliente,
+              saldoPendiente: result.data.prestamo.saldoPendiente,
+              interesesAcumulados: result.data.prestamo.interesesAcumulados,
+              estado: result.data.prestamo.estado,
+              cuotasPagadas: result.data.prestamo.cuotasPagadas,
+              fechaProximoPago: result.data.prestamo.fechaProximoPago || cliente.fechaProximoPago
+            };
+          }
+          return cliente;
+        })
       );
 
       setClientesOriginales(prev =>
-        prev.map(cliente =>
-          cliente.id === clienteSeleccionado.id ? clienteActualizado : cliente
-        )
+        prev.map(cliente => {
+          if (cliente.id === clienteSeleccionado.id) {
+            return {
+              ...cliente,
+              saldoPendiente: result.data.prestamo.saldoPendiente,
+              interesesAcumulados: result.data.prestamo.interesesAcumulados,
+              estado: result.data.prestamo.estado,
+              cuotasPagadas: result.data.prestamo.cuotasPagadas,
+              fechaProximoPago: result.data.prestamo.fechaProximoPago || cliente.fechaProximoPago
+            };
+          }
+          return cliente;
+        })
       );
-
-      mostrarExito(`✅ Abono de intereses de ${formatearMoneda(monto)} registrado exitosamente`);
-
-      cerrarModalAbonoIntereses();
-
-    } catch (err: any) {
-      console.error('❌ Error:', {
-        message: err.message,
-        datosFormulario: formAbonoIntereses
-      });
-
-      mostrarError('❌ ' + (err.message || 'Error al registrar abono'));
-    } finally {
-      setLoading(false);
     }
-  };
+
+    mostrarExito(`✅ Abono de intereses de ${formatearMoneda(monto)} registrado exitosamente`);
+
+    // 🔥 NO cerrar el modal automáticamente - solo limpiar el formulario
+    setFormAbonoIntereses({
+      montoAbono: '',
+      tipo: 'intereses_mensuales',
+      observaciones: '',
+      fechaAbono: new Date().toISOString().split('T')[0]
+    });
+
+    // 🔥 Recargar historial después del abono
+    await cargarHistorialCliente(clienteSeleccionado.id);
+
+  } catch (err: any) {
+    console.error('❌ Error completo en registrarAbonoIntereses:', {
+      message: err.message,
+      clienteSeleccionado: clienteSeleccionado,
+      datosFormulario: formAbonoIntereses
+    });
+
+    mostrarError('❌ ' + (err.message || 'Error al registrar abono'));
+  } finally {
+    setLoading(false);
+  }
+};
 
   const registrarPago = async (e: React.FormEvent) => {
     e.preventDefault();

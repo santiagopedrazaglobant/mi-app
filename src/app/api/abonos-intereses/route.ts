@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../db/connect';
-import { ObjectId } from 'mongodb';
 import Pago from '../db/models/Pago';
 import Prestamo from '../db/models/Prestamo';
 import Cliente from '../db/models/Cliente';
@@ -71,82 +70,29 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/abonos-intereses - Crear nuevo abono de intereses (VERSIÓN MEJORADA CON ACTUALIZACIÓN DE SALDOS)
+// POST /api/abonos-intereses - Crear nuevo abono de intereses (ADAPTADO AL FRONTEND)
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     
     console.log('🔍 [ABONO] === INICIO DEPURACIÓN COMPLETA ===');
     
-    // Leer el body como texto primero
-    const rawBody = await request.text();
-    console.log('🔍 [ABONO] Body raw (texto):', rawBody);
+    // Leer el body
+    const data = await request.json();
+    console.log('🔍 [ABONO] Datos recibidos:', data);
     
-    let data;
-    try {
-      data = JSON.parse(rawBody);
-      console.log('🔍 [ABONO] Body parseado (JSON):', data);
-    } catch (parseError) {
-      console.error('❌ [ABONO] Error parseando JSON:', parseError);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Body inválido - no es JSON válido',
-          rawBody: rawBody.substring(0, 200)
-        },
-        { status: 400 }
-      );
-    }
-    
-    console.log('🔍 [ABONO] Análisis de datos recibidos:');
-    console.log('🔍 [ABONO] 1. clienteId:', { 
-      valor: data.clienteId, 
-      tipo: typeof data.clienteId,
-      existe: !!data.clienteId 
-    });
-    console.log('🔍 [ABONO] 2. montoAbono:', { 
-      valor: data.montoAbono, 
-      tipo: typeof data.montoAbono,
-      existe: !!data.montoAbono 
-    });
-    console.log('🔍 [ABONO] 3. tipo:', { 
-      valor: data.tipo, 
-      tipo: typeof data.tipo,
-      existe: !!data.tipo 
-    });
-    console.log('🔍 [ABONO] 4. fechaAbono:', { 
-      valor: data.fechaAbono, 
-      tipo: typeof data.fechaAbono,
-      existe: !!data.fechaAbono 
-    });
-    console.log('🔍 [ABONO] 5. metodoPago:', { 
-      valor: data.metodoPago, 
-      tipo: typeof data.metodoPago,
-      existe: !!data.metodoPago 
-    });
-    console.log('🔍 [ABONO] 6. observaciones:', { 
-      valor: data.observaciones, 
-      tipo: typeof data.observaciones,
-      existe: !!data.observaciones 
-    });
-    
-    console.log('🔍 [ABONO] === FIN DEPURACIÓN COMPLETA ===');
-    
-    // 🔥 VALIDACIÓN DE CAMPOS REQUERIDOS
+    // 🔥 VALIDACIÓN DE CAMPOS REQUERIDOS - SEGÚN FRONTEND
     const camposRequeridos = ['clienteId', 'montoAbono', 'tipo'];
     const camposFaltantes = camposRequeridos.filter(campo => !data[campo]);
     
     if (camposFaltantes.length > 0) {
       console.error('❌ [ABONO] Campos faltantes:', camposFaltantes);
-      console.error('❌ [ABONO] Datos completos recibidos:', data);
-      
       return NextResponse.json(
         { 
           success: false, 
           error: `Faltan campos obligatorios: ${camposFaltantes.join(', ')}`,
           camposFaltantes,
-          datosRecibidos: data,
-          todosLosCampos: Object.keys(data)
+          datosRecibidos: data
         },
         { status: 400 }
       );
@@ -169,8 +115,7 @@ export async function POST(request: NextRequest) {
       clienteId: data.clienteId,
       montoAbono: montoAbono,
       tipo: data.tipo,
-      fechaAbono: data.fechaAbono || new Date().toISOString(),
-      metodoPago: data.metodoPago || 'Efectivo',
+      fechaAbono: data.fechaAbono || new Date().toISOString().split('T')[0],
       observaciones: data.observaciones || ''
     });
     
@@ -213,30 +158,40 @@ export async function POST(request: NextRequest) {
     const interesesAcumuladosActual = prestamo.interesesAcumulados || 0;
     const interesMensualActual = prestamo.interesMensual || 0;
     const capitalMensualActual = prestamo.capitalMensual || 0;
-    const cuotaMensualActual = prestamo.cuotaMensual || 0;
     const cuotasPagadasActual = prestamo.cuotasPagadas || 0;
     const numeroCuotasTotal = prestamo.numeroCuotas || 0;
 
-    // 🔥 PASO 3: CALCULAR DISTRIBUCIÓN SEGÚN TIPO DE ABONO
+    // 🔥 PASO 3: CALCULAR DISTRIBUCIÓN SEGÚN TIPO DE ABONO DEL FRONTEND
     let abonoCapital = 0;
     let abonoInteres = 0;
     let abonoInteresesMora = 0;
     let observacionesFinal = data.observaciones || '';
-
+    
+    // 🔥 MAPPING DE TIPOS DEL FRONTEND
+    let tipoBackend = 'interes'; // Por defecto
+    
     switch (data.tipo) {
-      case 'interes':
-      case 'solo_intereses':
-        // Solo paga intereses del mes actual
+      case 'intereses_mensuales':
+        // Solo paga intereses del mes actual (viene del frontend)
         abonoInteres = Math.min(montoAbono, interesMensualActual);
-        observacionesFinal = data.observaciones || 'Abono solo de intereses mensuales';
-        console.log(`📈 [ABONO] Abono solo intereses: ${abonoInteres}`);
+        observacionesFinal = data.observaciones || 'Pago de intereses mensuales';
+        tipoBackend = 'solo_intereses';
+        console.log(`📈 [ABONO] Abono intereses mensuales: ${abonoInteres}`);
+        break;
+        
+      case 'intereses_acumulados':
+        // Paga intereses acumulados por mora
+        abonoInteresesMora = Math.min(montoAbono, interesesAcumuladosActual);
+        observacionesFinal = data.observaciones || 'Pago de intereses acumulados';
+        tipoBackend = 'intereses_mora';
+        console.log(`📈 [ABONO] Abono intereses acumulados: ${abonoInteresesMora}`);
         break;
         
       case 'capital':
-      case 'solo_capital':
         // Solo reduce el capital (deuda principal)
         abonoCapital = Math.min(montoAbono, saldoPendienteActual);
-        observacionesFinal = data.observaciones || 'Abono solo de capital';
+        observacionesFinal = data.observaciones || 'Abono de capital';
+        tipoBackend = 'solo_capital';
         console.log(`📈 [ABONO] Abono solo capital: ${abonoCapital}`);
         break;
         
@@ -244,21 +199,16 @@ export async function POST(request: NextRequest) {
         // Distribución: 70% capital, 30% intereses
         abonoCapital = Math.min(montoAbono * 0.7, saldoPendienteActual);
         abonoInteres = Math.min(montoAbono * 0.3, interesMensualActual);
-        observacionesFinal = data.observaciones || 'Abono parcial de capital e intereses (70/30)';
+        observacionesFinal = data.observaciones || 'Abono parcial de capital e intereses';
+        tipoBackend = 'ambos';
         console.log(`📈 [ABONO] Abono ambos: capital=${abonoCapital}, interes=${abonoInteres}`);
-        break;
-        
-      case 'intereses_mora':
-        // Paga intereses acumulados por mora
-        abonoInteresesMora = Math.min(montoAbono, interesesAcumuladosActual);
-        observacionesFinal = data.observaciones || 'Abono de intereses acumulados por mora';
-        console.log(`📈 [ABONO] Abono intereses mora: ${abonoInteresesMora}`);
         break;
         
       default:
         // Por defecto, asumir que es solo intereses
         abonoInteres = Math.min(montoAbono, interesMensualActual);
         observacionesFinal = data.observaciones || 'Abono de intereses';
+        tipoBackend = 'interes';
         console.log(`📈 [ABONO] Tipo no reconocido, usando solo intereses: ${abonoInteres}`);
     }
 
@@ -268,7 +218,8 @@ export async function POST(request: NextRequest) {
     
     console.log(`📈 [ABONO] Cálculos completos:`, {
       montoAbono,
-      tipo: data.tipo,
+      tipoFrontend: data.tipo,
+      tipoBackend,
       abonoCapital,
       abonoInteres,
       abonoInteresesMora,
@@ -287,7 +238,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ [ABONO] Préstamo completamente pagado');
     }
     // Si paga intereses de mora y quedan 0, vuelve a pendiente
-    else if (data.tipo === 'intereses_mora' && nuevosInteresesAcumulados === 0 && prestamo.estado === 'mora') {
+    else if (data.tipo === 'intereses_acumulados' && nuevosInteresesAcumulados === 0 && prestamo.estado === 'mora') {
       nuevoEstadoPrestamo = 'pendiente';
       console.log('✅ [ABONO] Cliente sale de mora');
     }
@@ -310,14 +261,9 @@ export async function POST(request: NextRequest) {
     // 🔥 CORREGIDO: Convertir fecha si es string
     let fechaAbono = data.fechaAbono || new Date();
     if (typeof fechaAbono === 'string') {
-      // Asegurar que sea una fecha válida
-      const fechaTemp = new Date(fechaAbono);
-      if (isNaN(fechaTemp.getTime())) {
-        console.warn('⚠️ [ABONO] Fecha inválida, usando fecha actual');
-        fechaAbono = new Date();
-      } else {
-        fechaAbono = fechaTemp;
-      }
+      // Formato YYYY-MM-DD del frontend
+      const [year, month, day] = fechaAbono.split('-').map(Number);
+      fechaAbono = new Date(year, month - 1, day);
     }
 
     // 🔥 PASO 7: REGISTRAR EL PAGO EN EL HISTORIAL
@@ -351,7 +297,7 @@ export async function POST(request: NextRequest) {
       prestamoId: prestamo._id,
       pagoId: nuevoPago._id,
       montoAbono: montoAbono,
-      tipo: data.tipo,
+      tipo: tipoBackend, // Usamos el tipo mapeado para el backend
       abonoCapital,
       abonoInteres,
       abonoInteresesMora,
@@ -371,7 +317,8 @@ export async function POST(request: NextRequest) {
     await abonoInteresesNuevo.save();
     console.log('✅ [ABONO] Abono registrado:', {
       id: abonoInteresesNuevo._id,
-      tipo: abonoInteresesNuevo.tipo,
+      tipoFrontend: data.tipo,
+      tipoBackend: abonoInteresesNuevo.tipo,
       monto: abonoInteresesNuevo.montoAbono
     });
 
@@ -432,10 +379,10 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [ABONO] Cliente actualizado, nuevo estado:', nuevoEstadoCliente);
 
-    // 🔥 PASO 11: RESPONDER CON TODA LA INFORMACIÓN
+    // 🔥 PASO 11: RESPONDER CON FORMATO QUE ESPERA EL FRONTEND
     return NextResponse.json({
       success: true,
-      message: `Abono de ${formatearMoneda(montoAbono)} registrado exitosamente`,
+      message: `Abono de intereses de ${formatearMoneda(montoAbono)} registrado exitosamente`,
       data: {
         abono: abonoInteresesNuevo,
         pago: nuevoPago,
@@ -445,15 +392,12 @@ export async function POST(request: NextRequest) {
           estado: nuevoEstadoCliente
         },
         resumen: {
-          tipo: data.tipo,
+          tipo: data.tipo, // Mantener el tipo original del frontend
           montoTotal: montoAbono,
           capitalAbonado: abonoCapital,
           interesesAbonados: abonoInteres + abonoInteresesMora,
-          saldoReducido: saldoPendienteActual - nuevoSaldoPendiente,
-          interesesReducidos: interesesAcumuladosActual - nuevosInteresesAcumulados,
           nuevoSaldo: nuevoSaldoPendiente,
-          nuevosInteresesAcum: nuevosInteresesAcumulados,
-          cuotasPagadasAdicionales: incrementarCuotasPagadas
+          nuevosInteresesAcum: nuevosInteresesAcumulados
         }
       }
     }, { status: 201 });
@@ -469,16 +413,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Función auxiliar para formatear moneda
-function formatearMoneda(monto: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(monto);
 }
 
 // PUT /api/abonos-intereses - Actualizar abono
@@ -558,4 +492,14 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Función auxiliar para formatear moneda
+function formatearMoneda(monto: number): string {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(monto);
 }

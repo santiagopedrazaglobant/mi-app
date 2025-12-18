@@ -24,7 +24,8 @@ const AbonoInteresesSchema = new mongoose.Schema({
   tipo: {
     type: String,
     required: true,
-    enum: ['interes', 'capital', 'ambos', 'solo_intereses', 'solo_capital', 'intereses_mora']
+    // ACTUALIZADO: Incluir los tipos que envía el frontend
+    enum: ['interes', 'capital', 'ambos', 'solo_intereses', 'solo_capital', 'intereses_mora', 'intereses_mensuales', 'intereses_acumulados']
   },
   abonoCapital: {
     type: Number,
