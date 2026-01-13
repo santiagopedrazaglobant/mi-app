@@ -3,6 +3,7 @@ import { connectToDatabase } from '../db/connect';
 import Cliente from '../db/models/Cliente';
 import Prestamo from '../db/models/Prestamo';
 import Pago from '../db/models/Pago';
+import AbonoIntereses from '../db/models/AbonoIntereses';
 
 // Configuración de segmento de ruta
 export const dynamic = 'force-dynamic';
@@ -385,7 +386,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/clientes - Eliminar cliente COMPLETAMENTE
+// DELETE /api/clientes - Eliminar cliente COMPLETAMENTE CON ABONOS DE INTERESES
 export async function DELETE(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -396,14 +397,12 @@ export async function DELETE(request: NextRequest) {
     // Leer el body para verificar si queremos borrar todo
     let deleteAll = false;
     try {
-      // Intentar leer el body como JSON
       const bodyText = await request.text();
       if (bodyText) {
         const body = JSON.parse(bodyText);
         deleteAll = body.deleteAll || false;
       }
     } catch (e) {
-      // Si no hay body o no es JSON válido, continuar sin deleteAll
       console.log('No se pudo parsear el body, usando deleteAll = false');
     }
 
@@ -439,21 +438,71 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Si el cliente tiene préstamos Y deleteAll=true, eliminamos todo
+    // DECLARAR LAS VARIABLES FUERA DEL BLOQUE IF PARA QUE ESTÉN DISPONIBLES
+    let pagosEliminados = 0;
+    let abonosInteresesEliminados = 0;
+
+    // Si el cliente tiene préstamos Y deleteAll=true, eliminamos TODO
     if (prestamosCliente.length > 0 && deleteAll) {
       console.log(`📊 Encontrados ${prestamosCliente.length} préstamos para eliminar`);
       
+      const prestamoIds = prestamosCliente.map(p => p._id);
+      
       for (const prestamo of prestamosCliente) {
-        console.log(`🗑️ Eliminando préstamo ${prestamo._id}`);
+        console.log(`🗑️ Procesando préstamo ${prestamo._id}`);
         
-        // 1. Primero eliminar todos los pagos de este préstamo
-        await Pago.deleteMany({ prestamo: prestamo._id });
-        console.log(`✅ Pagos del préstamo ${prestamo._id} eliminados`);
+        // 1. Eliminar ABONOS DE INTERESES de este préstamo
+        const abonosResult = await AbonoIntereses.deleteMany({ 
+          $or: [
+            { clienteId: id },
+            { prestamoId: prestamo._id }
+          ]
+        });
+        abonosInteresesEliminados += abonosResult.deletedCount;
+        console.log(`✅ ${abonosResult.deletedCount} abonos de intereses del préstamo ${prestamo._id} eliminados`);
         
-        // 2. Luego eliminar el préstamo
+        // 2. Eliminar PAGOS de este préstamo
+        const pagosResult = await Pago.deleteMany({ prestamo: prestamo._id });
+        pagosEliminados += pagosResult.deletedCount;
+        console.log(`✅ ${pagosResult.deletedCount} pagos del préstamo ${prestamo._id} eliminados`);
+        
+        // 3. Eliminar el préstamo
         await Prestamo.findByIdAndDelete(prestamo._id);
         console.log(`✅ Préstamo ${prestamo._id} eliminado`);
       }
+      
+      // 4. También eliminar abonos que puedan estar asociados directamente al cliente
+      const abonosDirectosResult = await AbonoIntereses.deleteMany({ clienteId: id });
+      abonosInteresesEliminados += abonosDirectosResult.deletedCount;
+      console.log(`✅ ${abonosDirectosResult.deletedCount} abonos directos del cliente eliminados`);
+      
+      // 5. Eliminar pagos directos del cliente
+      const pagosDirectosResult = await Pago.deleteMany({ clienteId: id });
+      pagosEliminados += pagosDirectosResult.deletedCount;
+      console.log(`✅ ${pagosDirectosResult.deletedCount} pagos directos del cliente eliminados`);
+      
+      // Reporte de eliminación
+      console.log(`
+      📋 RESUMEN DE ELIMINACIÓN:
+      -------------------------
+      • Préstamos eliminados: ${prestamosCliente.length}
+      • Pagos eliminados: ${pagosEliminados}
+      • Abonos de intereses eliminados: ${abonosInteresesEliminados}
+      `);
+    } else if (deleteAll) {
+      // Si deleteAll=true pero no hay préstamos, igual eliminar abonos y pagos directos
+      const abonosResult = await AbonoIntereses.deleteMany({ clienteId: id });
+      abonosInteresesEliminados = abonosResult.deletedCount;
+      
+      const pagosResult = await Pago.deleteMany({ clienteId: id });
+      pagosEliminados = pagosResult.deletedCount;
+      
+      console.log(`
+      📋 RESUMEN DE ELIMINACIÓN (sin préstamos):
+      ------------------------------------------
+      • Abonos de intereses eliminados: ${abonosInteresesEliminados}
+      • Pagos eliminados: ${pagosEliminados}
+      `);
     }
 
     // Finalmente, eliminar el cliente
@@ -471,8 +520,14 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: deleteAll 
-        ? 'Cliente, préstamos y pagos eliminados exitosamente'
-        : 'Cliente eliminado exitosamente'
+        ? 'Cliente, préstamos, pagos y abonos de intereses eliminados exitosamente'
+        : 'Cliente eliminado exitosamente',
+      detalles: deleteAll ? {
+        cliente: 1,
+        prestamos: prestamosCliente.length,
+        pagos: pagosEliminados,
+        abonosIntereses: abonosInteresesEliminados
+      } : undefined
     });
 
   } catch (error: any) {
@@ -480,7 +535,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Error al eliminar cliente'
+        error: error.message || 'Error al eliminar cliente',
+        detalles: error.stack
       },
       { status: 500 }
     );

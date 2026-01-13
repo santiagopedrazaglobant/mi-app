@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 
-// Interfaz para el cliente con cálculo detallado
+// Interfaces
 interface Cliente {
   id: string;
   nombre: string;
@@ -16,6 +16,7 @@ interface Cliente {
   numeroCuotas: number;
   fechaPrestamo: string;
   fechaProximoPago: string;
+  diaPago: number;
   estado: 'pendiente' | 'pagado' | 'mora';
   cuotasPagadas: number;
   saldoPendiente: number;
@@ -29,7 +30,6 @@ interface Cliente {
   observaciones?: string;
 }
 
-// Interfaz para el pago
 interface Pago {
   id: string;
   clienteId: string;
@@ -71,6 +71,39 @@ const calcularPrestamoDetallado = (
   };
 };
 
+// Función para calcular intereses por días específicos
+const calcularInteresesPorDias = (
+  monto: number,
+  tasaInteresAnual: number,
+  dias: number
+) => {
+  const intereses = monto * (tasaInteresAnual / 100) * (dias / 360);
+  return Math.round(intereses);
+};
+
+// 🔥 NUEVA FUNCIÓN: Calcular porción de intereses mensuales según días
+const calcularPorcionInteresesMensuales = (
+  interesMensual: number,
+  dias: number
+): number => {
+  if (!interesMensual || interesMensual <= 0 || !dias || dias <= 0) {
+    return 0;
+  }
+  
+  // Fórmula: (Interés mensual / 30) × días
+  // Esto calcula la porción proporcional del interés mensual
+  const interesDiarioPromedio = interesMensual / 30;
+  const porcion = interesDiarioPromedio * dias;
+  
+  // Redondear al entero más cercano
+  return Math.round(porcion);
+};
+
+// Función para calcular la tasa diaria
+const calcularTasaDiaria = (tasaInteresAnual: number) => {
+  return (tasaInteresAnual / 100) / 360; // CORREGIDO: 360 días comerciales
+};
+
 // Función para manejar fechas sin problemas de zona horaria
 const manejarFechaSinZonaHoraria = (fechaString: string): string => {
   if (!fechaString) {
@@ -81,23 +114,27 @@ const manejarFechaSinZonaHoraria = (fechaString: string): string => {
     return `${year}-${month}-${day}`;
   }
 
-  // Si ya está en formato YYYY-MM-DD, devolverlo tal cual
   if (fechaString.match(/^\d{4}-\d{2}-\d{2}$/)) {
     return fechaString;
   }
 
-  // Para fechas en formato ISO, extraer solo la parte de la fecha
-  const fechaObj = new Date(fechaString);
-
-  // Usar UTC para evitar problemas de zona horaria
-  const year = fechaObj.getUTCFullYear();
-  const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(fechaObj.getUTCDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
+  try {
+    const fechaObj = new Date(fechaString);
+    const year = fechaObj.getFullYear();
+    const month = String(fechaObj.getMonth() + 1).padStart(2, '0');
+    const day = String(fechaObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 };
 
-// Función para formatear fecha a YYYY-MM-DD sin problemas de zona horaria
+// Función para formatear fecha a YYYY-MM-DD
 const formatearFechaParaBackend = (fechaString: string): string => {
   if (!fechaString) {
     const hoy = new Date();
@@ -107,29 +144,119 @@ const formatearFechaParaBackend = (fechaString: string): string => {
     return `${year}-${month}-${day}`;
   }
 
-  // Si la fecha ya está en formato YYYY-MM-DD, devolverla directamente
   if (fechaString.match(/^\d{4}-\d{2}-\d{2}$/)) {
     return fechaString;
   }
 
-  // Para fechas en formato ISO, extraer solo la parte de la fecha
-  const fechaObj = new Date(fechaString);
-
-  // Usar UTC para evitar problemas de zona horaria
-  const year = fechaObj.getUTCFullYear();
-  const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(fechaObj.getUTCDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
+  try {
+    const matchDDMMYYYY = fechaString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (matchDDMMYYYY) {
+      const [, day, month, year] = matchDDMMYYYY;
+      return `${year}-${month}-${day}`;
+    }
+    
+    const matchMMDDYYYY = fechaString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (matchMMDDYYYY) {
+      const [, month, day, year] = matchMMDDYYYY;
+      const monthPadded = month.padStart(2, '0');
+      const dayPadded = day.padStart(2, '0');
+      return `${year}-${monthPadded}-${dayPadded}`;
+    }
+    
+    console.warn(`⚠️ Formateando fecha desconocida: ${fechaString}`);
+    const fecha = new Date(fechaString);
+    
+    const fechaAjustada = new Date(
+      fecha.getFullYear(),
+      fecha.getMonth(),
+      fecha.getDate(),
+      12,
+      0,
+      0,
+      0
+    );
+    
+    const year = fechaAjustada.getFullYear();
+    const month = String(fechaAjustada.getMonth() + 1).padStart(2, '0');
+    const day = String(fechaAjustada.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('❌ Error formateando fecha para backend:', fechaString, error);
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 };
 
-// SERVICIO CONEXIÓN API REAL - ACTUALIZADO
+// Función auxiliar para obtener día desde fecha
+const obtenerDiaPagoDesdeFecha = (fechaString: string): number => {
+  if (!fechaString) return 0;
+  
+  try {
+    console.log(`📅 Obteniendo día de pago desde fecha: ${fechaString}`);
+    
+    const matchYYYYMMDD = fechaString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (matchYYYYMMDD) {
+      const [, , , day] = matchYYYYMMDD;
+      const dia = parseInt(day, 10);
+      console.log(`✅ Extraído directamente del formato YYYY-MM-DD: día ${dia}`);
+      return dia;
+    }
+    
+    const matchDDMMYYYY = fechaString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (matchDDMMYYYY) {
+      const [, day, ,] = matchDDMMYYYY;
+      const dia = parseInt(day, 10);
+      console.log(`✅ Extraído directamente del formato DD/MM/YYYY: día ${dia}`);
+      return dia;
+    }
+    
+    if (fechaString.includes('T')) {
+      const fechaParte = fechaString.split('T')[0];
+      const matchISO = fechaParte.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (matchISO) {
+        const [, , , day] = matchISO;
+        const dia = parseInt(day, 10);
+        console.log(`✅ Extraído de fecha ISO: día ${dia}`);
+        return dia;
+      }
+    }
+    
+    console.warn(`⚠️ Usando Date como último recurso para: ${fechaString}`);
+    const fecha = new Date(fechaString);
+    
+    if (isNaN(fecha.getTime())) {
+      console.error(`❌ Fecha inválida: ${fechaString}`);
+      return 0;
+    }
+    
+    const localDate = new Date(
+      fecha.getFullYear(),
+      fecha.getMonth(),
+      fecha.getDate(),
+      12,
+      0,
+      0,
+      0
+    );
+    
+    const dia = localDate.getDate();
+    console.log(`📊 Día obtenido via Date ajustado: ${dia}`);
+    return dia;
+  } catch (error) {
+    console.error(`❌ Error obteniendo día de pago desde ${fechaString}:`, error);
+    return 0;
+  }
+};
+
+// SERVICIO CONEXIÓN API REAL - MODIFICADO
 class SistemaPrestamosService {
-  // Obtener todos los clientes con sus préstamos
   static async obtenerClientes(): Promise<Cliente[]> {
     try {
       console.log('🔄 Obteniendo clientes...');
-
       const timestamp = new Date().getTime();
       const clientesResponse = await fetch(`/api/clientes?_=${timestamp}`);
 
@@ -145,7 +272,6 @@ class SistemaPrestamosService {
 
       console.log(`✅ ${clientesResult.data?.length || 0} clientes obtenidos`);
 
-      // Transformar los datos: convertir _id a id
       const clientesTransformados = (clientesResult.data || []).map((cliente: any) => {
         if (!cliente.id && cliente._id) {
           return {
@@ -157,24 +283,20 @@ class SistemaPrestamosService {
       });
 
       return clientesTransformados;
-
     } catch (error: any) {
       console.error('❌ Error fetching clientes:', error);
       throw error;
     }
   }
 
-  // Editar cliente y préstamo
   static async editarCliente(id: string, datosActualizados: any): Promise<Cliente> {
     try {
       console.log('✏️ Editando cliente:', id, datosActualizados);
 
-      // Primero actualizar los datos del préstamo para recalcular el saldo
       if (datosActualizados.montoPrestamo || datosActualizados.tasaInteres || datosActualizados.numeroCuotas) {
         await this.actualizarPrestamo(id, datosActualizados);
       }
 
-      // Luego actualizar los datos del cliente
       const response = await fetch(`/api/clientes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -192,7 +314,6 @@ class SistemaPrestamosService {
       const result = await response.json();
       console.log('✅ Cliente editado:', result);
 
-      // Finalmente, obtener el cliente actualizado
       const clienteActualizado = await this.obtenerClientePorId(id);
       return clienteActualizado;
 
@@ -202,7 +323,6 @@ class SistemaPrestamosService {
     }
   }
 
-  // Actualizar préstamo - CORREGIDO para fecha de registro un mes antes
   static async actualizarPrestamo(clienteId: string, datosPrestamo: any): Promise<any> {
     try {
       console.log('🔄 Actualizando préstamo con datos:', datosPrestamo);
@@ -219,17 +339,20 @@ class SistemaPrestamosService {
       const prestamoActual = prestamosResult.data[0];
       const prestamoId = prestamoActual._id;
 
-      // Obtener valores actuales o nuevos
       const monto = datosPrestamo.montoPrestamo || prestamoActual.montoPrestamo;
       const tasa = datosPrestamo.tasaInteres || prestamoActual.tasaInteres;
       const cuotas = datosPrestamo.numeroCuotas || prestamoActual.numeroCuotas;
       const cuotasPagadas = prestamoActual.cuotasPagadas || 0;
 
-      // 🔥 IMPORTANTE: Si hay nueva fecha de próximo pago, calcular fecha de registro
       let fechaProximoPago = datosPrestamo.fechaProximoPago || prestamoActual.fechaProximoPago;
-      let fechaPrestamo = prestamoActual.fechaPrestamo; // Por defecto mantener la actual
+      let fechaPrestamo = prestamoActual.fechaPrestamo;
 
-      // Función para calcular fecha de registro (un mes antes)
+      let diaPago = prestamoActual.diaPago || obtenerDiaPagoDesdeFecha(prestamoActual.fechaProximoPago);
+      if (datosPrestamo.fechaProximoPago) {
+        diaPago = obtenerDiaPagoDesdeFecha(datosPrestamo.fechaProximoPago);
+        console.log(`📅 Nuevo día de pago: ${diaPago}`);
+      }
+
       const calcularFechaRegistro = (fechaProxPago: string) => {
         const fecha = new Date(fechaProxPago);
         fecha.setMonth(fecha.getMonth() - 1);
@@ -240,40 +363,13 @@ class SistemaPrestamosService {
         return `${year}-${month}-${day}`;
       };
 
-      // Si se está actualizando la fecha de próximo pago
       if (datosPrestamo.fechaProximoPago && datosPrestamo.fechaProximoPago !== prestamoActual.fechaProximoPago) {
-        console.log('📅 Calculando nueva fecha de registro...');
-        console.log('Fecha próximo pago recibida:', datosPrestamo.fechaProximoPago);
-
-        // Calcular la nueva fecha de registro (un mes antes)
         fechaPrestamo = calcularFechaRegistro(datosPrestamo.fechaProximoPago);
-
-        console.log('Fechas calculadas:', {
-          nuevoProximoPago: datosPrestamo.fechaProximoPago,
-          nuevaFechaRegistro: fechaPrestamo,
-          diferencia: 'La fecha de registro es un mes antes del próximo pago'
-        });
       }
 
-      // Calcular el nuevo préstamo
       const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
-
-      // Recalcular el saldo pendiente
       const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
       const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
-
-      console.log('🔄 Recalculando préstamo:', {
-        fechaProximoPago,
-        fechaPrestamo,
-        montoAnterior: prestamoActual.montoPrestamo,
-        montoNuevo: monto,
-        cuotasPagadas,
-        cuotaMensualNueva: calculo.cuotaMensual,
-        totalPagadoHastaAhora,
-        totalPagarNuevo: calculo.totalPagar,
-        saldoPendienteAnterior: prestamoActual.saldoPendiente,
-        saldoPendienteNuevo
-      });
 
       const prestamoData = {
         id: prestamoId,
@@ -288,12 +384,10 @@ class SistemaPrestamosService {
         totalIntereses: calculo.totalIntereses,
         total4x1000: calculo.total4x1000,
         interesesAcumulados: datosPrestamo.interesesAcumulados || prestamoActual.interesesAcumulados || 0,
-        // ENVIAR AMBAS FECHAS
         fechaProximoPago: datosPrestamo.fechaProximoPago || prestamoActual.fechaProximoPago,
-        fechaPrestamo: fechaPrestamo // La fecha calculada (un mes antes)
+        diaPago: diaPago,
+        fechaPrestamo: fechaPrestamo
       };
-
-      console.log('📤 Enviando datos al backend:', prestamoData);
 
       const response = await fetch(`/api/prestamos`, {
         method: 'PUT',
@@ -317,7 +411,6 @@ class SistemaPrestamosService {
     }
   }
 
-  // Obtener cliente por ID
   static async obtenerClientePorId(id: string): Promise<Cliente> {
     try {
       const response = await fetch(`/api/clientes?id=${id}`);
@@ -327,7 +420,6 @@ class SistemaPrestamosService {
 
       if (result.success && result.data) {
         const clienteData = result.data;
-
         const clienteId = clienteData._id || clienteData.id;
 
         const prestamosResponse = await fetch(`/api/prestamos?clienteId=${clienteId}`);
@@ -335,6 +427,11 @@ class SistemaPrestamosService {
         const prestamoCliente = prestamosResult.success && prestamosResult.data.length > 0
           ? prestamosResult.data[0]
           : null;
+
+        let diaPago = prestamoCliente?.diaPago || 0;
+        if (!diaPago && prestamoCliente?.fechaProximoPago) {
+          diaPago = obtenerDiaPagoDesdeFecha(prestamoCliente.fechaProximoPago);
+        }
 
         return {
           id: clienteId,
@@ -349,6 +446,7 @@ class SistemaPrestamosService {
           numeroCuotas: prestamoCliente?.numeroCuotas || 0,
           fechaPrestamo: prestamoCliente?.fechaPrestamo || new Date().toISOString().split('T')[0],
           fechaProximoPago: prestamoCliente?.fechaProximoPago || new Date().toISOString().split('T')[0],
+          diaPago: diaPago,
           estado: prestamoCliente?.estado || 'pendiente',
           cuotasPagadas: prestamoCliente?.cuotasPagadas || 0,
           saldoPendiente: prestamoCliente?.saldoPendiente || 0,
@@ -370,43 +468,17 @@ class SistemaPrestamosService {
     }
   }
 
-  // Obtener clientes por fecha de registro del préstamo
-  static async obtenerClientesPorFechaRegistro(fechaInicio: string, fechaFin: string): Promise<Cliente[]> {
-    try {
-      const response = await fetch(`/api/clientes?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&filtro=fechaRegistro`);
-
-      if (!response.ok) throw new Error('Error al filtrar por fecha de registro');
-
-      const result = await response.json();
-
-      if (result.success) {
-        return result.data;
-      }
-
-      return [];
-    } catch (error) {
-      console.error('Error filtrando por fecha de registro:', error);
-      return [];
-    }
-  }
-
-  // Crear cliente y préstamo en un solo paso
   static async crearCliente(clienteData: any): Promise<Cliente> {
     try {
       console.log('📝 Creando cliente con datos:', clienteData);
 
-      // Convertir fechas a formato YYYY-MM-DD sin problemas de zona horaria
       const fechaPrestamo = formatearFechaParaBackend(clienteData.fechaPrestamo);
       const fechaProximoPago = clienteData.fechaProximoPago ?
         formatearFechaParaBackend(clienteData.fechaProximoPago) :
         fechaPrestamo;
 
-      console.log('📅 Fechas procesadas:', {
-        fechaPrestamoOriginal: clienteData.fechaPrestamo,
-        fechaPrestamoProcesada: fechaPrestamo,
-        fechaProximoPagoOriginal: clienteData.fechaProximoPago,
-        fechaProximoPagoProcesada: fechaProximoPago
-      });
+      const diaPago = obtenerDiaPagoDesdeFecha(fechaProximoPago);
+      console.log(`📅 Día de pago extraído: ${diaPago} de la fecha ${fechaProximoPago}`);
 
       const clienteResponse = await fetch('/api/clientes', {
         method: 'POST',
@@ -430,15 +502,11 @@ class SistemaPrestamosService {
       const clienteResult = await clienteResponse.json();
       const nuevoCliente = clienteResult.data;
 
-      console.log('✅ Cliente creado:', nuevoCliente);
-
       const montoPrestamo = parseFloat(clienteData.montoPrestamo);
       const tasaInteres = parseFloat(clienteData.tasaInteres);
       const numeroCuotas = parseInt(clienteData.numeroCuotas);
 
       const calculo = calcularPrestamoDetallado(montoPrestamo, tasaInteres, numeroCuotas);
-
-      console.log('🧮 Cálculo del préstamo:', calculo);
 
       const prestamoData = {
         cliente: nuevoCliente._id,
@@ -447,10 +515,9 @@ class SistemaPrestamosService {
         numeroCuotas: numeroCuotas,
         fechaPrestamo: fechaPrestamo,
         fechaProximoPago: fechaProximoPago,
+        diaPago: diaPago,
         observaciones: 'Préstamo inicial'
       };
-
-      console.log('📤 Enviando datos del préstamo:', prestamoData);
 
       const prestamoResponse = await fetch('/api/prestamos', {
         method: 'POST',
@@ -478,8 +545,6 @@ class SistemaPrestamosService {
       const prestamoResult = await prestamoResponse.json();
       const nuevoPrestamo = prestamoResult.data;
 
-      console.log('✅ Préstamo creado:', nuevoPrestamo);
-
       return {
         id: nuevoCliente._id,
         nombre: nuevoCliente.nombre,
@@ -493,6 +558,7 @@ class SistemaPrestamosService {
         numeroCuotas: nuevoPrestamo.numeroCuotas,
         fechaPrestamo: nuevoPrestamo.fechaPrestamo,
         fechaProximoPago: nuevoPrestamo.fechaProximoPago,
+        diaPago: diaPago,
         estado: nuevoPrestamo.estado,
         cuotasPagadas: nuevoPrestamo.cuotasPagadas || 0,
         saldoPendiente: nuevoPrestamo.saldoPendiente || calculo.totalPagar,
@@ -512,11 +578,12 @@ class SistemaPrestamosService {
     }
   }
 
-  // Eliminar cliente COMPLETAMENTE
+  // FUNCIÓN MODIFICADA: Eliminar cliente y todo su historial
   static async eliminarCliente(id: string): Promise<void> {
     try {
-      console.log('🗑️ Eliminando cliente:', id);
+      console.log('🗑️ Eliminando cliente y todo su historial:', id);
 
+      // Usar parámetro deleteAll=true para eliminación en cascada
       const response = await fetch(`/api/clientes?id=${id}`, {
         method: 'DELETE',
         headers: {
@@ -533,15 +600,107 @@ class SistemaPrestamosService {
       }
 
       const result = await response.json();
-      console.log('✅ Eliminación exitosa:', result.message);
+      console.log('✅ Eliminación completa exitosa:', result.message);
 
     } catch (error: any) {
-      console.error('❌ Error eliminando cliente:', error);
+      console.error('❌ Error eliminando cliente y su historial:', error);
       throw error;
     }
   }
 
-  // Registrar pago
+  // NUEVA FUNCIÓN: Registrar abono de intereses - CORREGIDA
+  static async registrarAbonoIntereses(abonoData: any): Promise<any> {
+    try {
+      console.log('💰 Registrando abono de intereses:', abonoData);
+
+      const prestamosResponse = await fetch(`/api/prestamos?clienteId=${abonoData.clienteId}`);
+      if (!prestamosResponse.ok) {
+        throw new Error('Error al buscar préstamo');
+      }
+
+      const prestamosResult = await prestamosResponse.json();
+      if (!prestamosResult.success || prestamosResult.data.length === 0) {
+        throw new Error('No se encontró préstamo para el cliente');
+      }
+
+      const prestamoActual = prestamosResult.data[0];
+      const prestamoId = prestamoActual._id;
+
+      const fechaAbonoReal = abonoData.fechaAbono || new Date().toISOString().split('T')[0];
+      const montoAbono = parseFloat(abonoData.montoAbono);
+      
+      if (!montoAbono || montoAbono <= 0) {
+        throw new Error('Monto de abono inválido');
+      }
+
+      // Calcular nuevo saldo y intereses acumulados
+      const nuevosInteresesAcumulados = Math.max(0, (prestamoActual.interesesAcumulados || 0) - montoAbono);
+      const nuevoSaldoPendiente = Math.max(0, (prestamoActual.saldoPendiente || 0) - montoAbono);
+
+      // Actualizar el préstamo con el abono de intereses
+      const prestamoActualizado = {
+        id: prestamoId,
+        interesesAcumulados: nuevosInteresesAcumulados,
+        saldoPendiente: nuevoSaldoPendiente,
+        estado: 'pendiente' // Mantener como pendiente aunque sea solo abono de intereses
+      };
+
+      // Registrar el pago como abono de intereses (cuotaNumero = 0)
+      const pagoInteresesData = {
+        prestamoId: prestamoId,
+        montoPagado: montoAbono,
+        cuotaNumero: 0, // 0 indica que es abono de intereses, no pago de cuota
+        fechaPago: fechaAbonoReal,
+        observaciones: abonoData.observaciones || 'Abono de intereses',
+        tipoPago: 'abono_intereses'
+      };
+
+      // 1. Registrar el pago como abono de intereses
+      const pagoResponse = await fetch('/api/pagos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pagoInteresesData)
+      });
+
+      if (!pagoResponse.ok) {
+        throw new Error('Error al registrar el abono');
+      }
+
+      // 2. Actualizar el préstamo
+      const prestamoResponse = await fetch('/api/prestamos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prestamoActualizado)
+      });
+
+      if (!prestamoResponse.ok) {
+        throw new Error('Error al actualizar préstamo');
+      }
+
+      const result = await prestamoResponse.json();
+      
+      // También actualizar en el cliente si tiene campos relacionados
+      if (prestamoActual.cliente) {
+        await this.editarCliente(prestamoActual.cliente, {
+          interesesAcumulados: nuevosInteresesAcumulados
+        });
+      }
+
+      return {
+        success: true,
+        data: {
+          prestamo: result.data,
+          pago: pagoInteresesData,
+          montoAbonado: montoAbono
+        }
+      };
+
+    } catch (error: any) {
+      console.error('❌ Error registrando abono de intereses:', error);
+      throw new Error(error.message || 'Error al registrar abono de intereses');
+    }
+  }
+
   static async registrarPago(pagoData: any): Promise<Pago> {
     try {
       console.log('💰 Registrando pago:', pagoData);
@@ -549,8 +708,6 @@ class SistemaPrestamosService {
       const fechaPagoReal = pagoData.fechaPago ?
         formatearFechaParaBackend(pagoData.fechaPago) :
         new Date().toISOString().split('T')[0];
-
-      console.log('📅 Fecha de pago a usar:', fechaPagoReal);
 
       const prestamosResponse = await fetch(`/api/prestamos?clienteId=${pagoData.clienteId}`);
 
@@ -565,10 +722,6 @@ class SistemaPrestamosService {
       }
 
       const prestamosResult = await prestamosResponse.json();
-      console.log('📊 Resultado búsqueda préstamo:', {
-        success: prestamosResult.success,
-        count: prestamosResult.data?.length || 0
-      });
 
       if (!prestamosResult.success) {
         throw new Error(prestamosResult.error || 'Error en la búsqueda de préstamo');
@@ -581,14 +734,6 @@ class SistemaPrestamosService {
       const prestamo = prestamosResult.data[0];
       const prestamoId = prestamo._id || prestamo.id;
 
-      console.log('✅ Préstamo encontrado:', {
-        id: prestamoId,
-        monto: prestamo.montoPrestamo,
-        saldo: prestamo.saldoPendiente,
-        cuotas: prestamo.cuotasPagadas + '/' + prestamo.numeroCuotas,
-        cuotaMensual: prestamo.cuotaMensual
-      });
-
       const cuotaSugerida = prestamo.cuotasPagadas + 1;
       const montoSugerido = prestamo.cuotaMensual || prestamo.montoPrestamo / prestamo.numeroCuotas;
 
@@ -600,8 +745,6 @@ class SistemaPrestamosService {
         observaciones: pagoData.observaciones || `Pago cuota ${pagoData.cuotaNumero || cuotaSugerida}`
       };
 
-      console.log('📤 Enviando pago a API:', pagoRequest);
-
       const response = await fetch('/api/pagos', {
         method: 'POST',
         headers: {
@@ -611,42 +754,25 @@ class SistemaPrestamosService {
         body: JSON.stringify(pagoRequest)
       });
 
-      console.log('📡 Estado respuesta pago:', response.status);
-
       if (!response.ok) {
         let errorMessage = 'Error al registrar pago';
         try {
           const errorData = await response.json();
-          console.error('❌ Error JSON:', errorData);
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
           const errorText = await response.text();
-          console.error('❌ Error texto:', errorText);
           errorMessage = `${response.status}: ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
 
       const result = await response.json();
-      console.log('✅ Resultado pago:', {
-        success: result.success,
-        message: result.message
-      });
 
       if (!result.success) {
         throw new Error(result.error || 'Error al registrar pago');
       }
 
       const nuevoPago = result.data.pago;
-      const prestamoActualizado = result.data.prestamo;
-
-      console.log('✅ Pago registrado exitosamente:', {
-        id: nuevoPago._id,
-        monto: nuevoPago.montoPagado,
-        cuota: nuevoPago.cuotaNumero,
-        fecha: nuevoPago.fechaPago,
-        prestamoActualizado: prestamoActualizado ? 'Sí' : 'No'
-      });
 
       return {
         id: nuevoPago._id || nuevoPago.id,
@@ -660,28 +786,15 @@ class SistemaPrestamosService {
       };
 
     } catch (error: any) {
-      console.error('❌ Error completo en registrarPago:', {
-        message: error.message,
-        stack: error.stack,
-        data: pagoData
-      });
-
+      console.error('❌ Error registrando pago:', error);
       let mensajeError = error.message;
       if (error.message.includes('No se encontró ningún préstamo')) {
         mensajeError = '❌ Este cliente no tiene préstamos registrados. Primero crea un préstamo.';
-      } else if (error.message.includes('404') || error.message.includes('no encontrado')) {
-        mensajeError = '❌ No se encontró el préstamo del cliente. Recarga la página e intenta nuevamente.';
-      } else if (error.message.includes('400')) {
-        mensajeError = '❌ Datos inválidos. Verifica el monto y número de cuota.';
-      } else if (error.message.includes('500')) {
-        mensajeError = '❌ Error del servidor. Intenta nuevamente en unos momentos.';
       }
-
       throw new Error(mensajeError);
     }
   }
 
-  // Obtener pagos por cliente
   static async obtenerPagosPorCliente(clienteId: string): Promise<Pago[]> {
     try {
       console.log('🔍 Obteniendo pagos para cliente:', clienteId);
@@ -694,42 +807,29 @@ class SistemaPrestamosService {
       }
 
       const result = await response.json();
-      console.log('📊 Respuesta pagos:', {
-        success: result.success,
-        count: result.data?.length || 0,
-        tieneDatos: !!result.data
-      });
 
       if (result.success && result.data && result.data.length > 0) {
-        console.log('✅ Primer pago recibido:', {
-          id: result.data[0]._id,
-          fechaPago: result.data[0].fechaPago,
-          capitalPagado: result.data[0].capitalPagado,
-          interesPagado: result.data[0].interesPagado,
-          montoPagado: result.data[0].montoPagado,
-          todasLasPropiedades: Object.keys(result.data[0])
-        });
-
         const pagosOrdenados = result.data.sort((a: any, b: any) =>
           new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime()
         );
 
         const pagos = pagosOrdenados.map((pagoData: any) => {
           const fechaOriginal = pagoData.fechaPago;
-
-          // Formatear fecha para visualización usando UTC
+          
+          // MODIFICADO: Solo formatear la fecha, no la hora
           const fechaObj = new Date(fechaOriginal);
-          const year = fechaObj.getUTCFullYear();
-          const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
-          const day = String(fechaObj.getUTCDate()).padStart(2, '0');
-          const hours = String(fechaObj.getUTCHours()).padStart(2, '0');
-          const minutes = String(fechaObj.getUTCMinutes()).padStart(2, '0');
+          const year = fechaObj.getFullYear();
+          const month = String(fechaObj.getMonth() + 1).padStart(2, '0');
+          const day = String(fechaObj.getDate()).padStart(2, '0');
+          
+          // Solo fecha, sin hora
+          const fechaFormateada = `${day}/${month}/${year}`;
 
           return {
             id: pagoData._id || pagoData.id,
             clienteId: clienteId,
             fechaPago: fechaOriginal,
-            fechaPagoFormateada: `${day}/${month}/${year} ${hours}:${minutes}`,
+            fechaPagoFormateada: fechaFormateada, // Solo fecha
             montoPagado: pagoData.montoPagado,
             cuotaNumero: pagoData.cuotaNumero,
             interesPagado: pagoData.interesPagado || 0,
@@ -752,9 +852,8 @@ class SistemaPrestamosService {
     }
   }
 
-  // Función para determinar el tipo de pago
   static determinarTipoPago(observaciones: string): string {
-    if (!observaciones) return 'Pago regular';
+    if (!observaciones) return 'Abono Intereses';
 
     const obs = observaciones.toLowerCase();
 
@@ -768,11 +867,11 @@ class SistemaPrestamosService {
 
     if (obs.includes('mora') || obs.includes('acumulados')) return 'Pago mora';
     if (obs.includes('cuota')) return 'Pago cuota regular';
+    if (obs.includes('intereses')) return 'Abono Intereses';
 
-    return 'Pago regular';
+    return 'Abono Intereses';
   }
 
-  // Marcar cliente en mora
   static async marcarEnMora(clienteId: string): Promise<void> {
     try {
       console.log('🚨 Marcando cliente en mora:', clienteId);
@@ -810,17 +909,120 @@ class SistemaPrestamosService {
       throw error;
     }
   }
+
+  static async obtenerClientesPorDiaPago(dia: number): Promise<Cliente[]> {
+    try {
+      console.log(`🔍 Buscando clientes con pago el día ${dia}...`);
+
+      const todosClientes = await this.obtenerClientes();
+      console.log(`📊 Total de clientes encontrados: ${todosClientes.length}`);
+
+      const clientesFiltrados = todosClientes.filter((cliente: Cliente) => {
+        try {
+          if (!cliente.diaPago && !cliente.fechaProximoPago) {
+            console.warn(`Cliente ${cliente.id} sin fechaProximoPago ni diaPago`);
+            return false;
+          }
+
+          const diaPago = cliente.diaPago || obtenerDiaPagoDesdeFecha(cliente.fechaProximoPago);
+          console.log(`Cliente ${cliente.nombre}: diaPago=${diaPago}, buscando=${dia}`);
+          return diaPago === dia;
+        } catch (error) {
+          console.error(`❌ Error procesando fecha para cliente ${cliente.id}:`, error);
+          return false;
+        }
+      });
+
+      console.log(`✅ Encontrados ${clientesFiltrados.length} clientes con pago el día ${dia}`);
+
+      const clientesCompletos: Cliente[] = [];
+
+      for (const cliente of clientesFiltrados) {
+        try {
+          const prestamosResponse = await fetch(`/api/prestamos?clienteId=${cliente.id}`);
+          if (prestamosResponse.ok) {
+            const prestamosResult = await prestamosResponse.json();
+            if (prestamosResult.success && prestamosResult.data.length > 0) {
+              const prestamoCliente = prestamosResult.data[0];
+
+              const clienteCompleto: Cliente = {
+                ...cliente,
+                montoPrestamo: prestamoCliente.montoPrestamo || 0,
+                tasaInteres: prestamoCliente.tasaInteres || 0,
+                numeroCuotas: prestamoCliente.numeroCuotas || 0,
+                fechaPrestamo: prestamoCliente.fechaPrestamo || cliente.fechaPrestamo,
+                fechaProximoPago: prestamoCliente.fechaProximoPago || cliente.fechaProximoPago,
+                diaPago: prestamoCliente.diaPago || cliente.diaPago || obtenerDiaPagoDesdeFecha(prestamoCliente.fechaProximoPago || cliente.fechaProximoPago),
+                estado: prestamoCliente.estado || 'pendiente',
+                cuotasPagadas: prestamoCliente.cuotasPagadas || 0,
+                saldoPendiente: prestamoCliente.saldoPendiente || 0,
+                totalIntereses: prestamoCliente.totalIntereses || 0,
+                total4x1000: prestamoCliente.total4x1000 || 0,
+                cuotaMensual: prestamoCliente.cuotaMensual || 0,
+                capitalMensual: prestamoCliente.capitalMensual || 0,
+                interesMensual: prestamoCliente.interesMensual || 0,
+                valor4x1000Mensual: prestamoCliente.valor4x1000Mensual || 0,
+                interesesAcumulados: prestamoCliente.interesesAcumulados || 0
+              };
+
+              clientesCompletos.push(clienteCompleto);
+            } else {
+              clientesCompletos.push(cliente);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Error obteniendo préstamo para cliente ${cliente.id}:`, error);
+          clientesCompletos.push(cliente);
+        }
+      }
+
+      console.log(`✅ ${clientesCompletos.length} clientes completos obtenidos para día ${dia}`);
+      return clientesCompletos;
+
+    } catch (error: any) {
+      console.error('❌ Error buscando clientes por día de pago:', error);
+
+      try {
+        console.log('🔄 Intentando método alternativo de búsqueda...');
+        return await this.busquedaAlternativaPorDia(dia);
+      } catch (error2) {
+        console.error('❌ Error en método alternativo:', error2);
+        throw error;
+      }
+    }
+  }
+
+  static async busquedaAlternativaPorDia(dia: number): Promise<Cliente[]> {
+    try {
+      const todosClientes = await this.obtenerClientes();
+
+      const clientesFiltrados = todosClientes.filter(cliente => {
+        try {
+          const diaPago = cliente.diaPago || obtenerDiaPagoDesdeFecha(cliente.fechaProximoPago);
+          return diaPago === dia;
+        } catch {
+          return false;
+        }
+      });
+
+      console.log(`🔍 Método alternativo: ${clientesFiltrados.length} clientes encontrados para día ${dia}`);
+      return clientesFiltrados;
+
+    } catch (error) {
+      console.error('❌ Error en método alternativo:', error);
+      return [];
+    }
+  }
 }
 
-// Componente principal
+// Componente principal actualizado
 export default function SistemaPrestamosElegante() {
+  // Estados principales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalPagoOpen, setIsModalPagoOpen] = useState(false);
   const [isModalEditarOpen, setIsModalEditarOpen] = useState(false);
   const [isModalAbonoInteresesOpen, setIsModalAbonoInteresesOpen] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
-  const [isModalBusquedaFechaOpen, setIsModalBusquedaFechaOpen] = useState(false);
-  const [fechaBusqueda, setFechaBusqueda] = useState('');
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -833,6 +1035,7 @@ export default function SistemaPrestamosElegante() {
     numeroCuotas: '',
     fechaPrestamo: new Date().toISOString().split('T')[0],
     fechaProximoPago: new Date().toISOString().split('T')[0],
+    diaPago: 0,
     observaciones: ''
   });
   const [formEditar, setFormEditar] = useState<any>({});
@@ -840,7 +1043,11 @@ export default function SistemaPrestamosElegante() {
     montoAbono: '',
     tipo: 'interes',
     observaciones: '',
-    fechaAbono: new Date().toISOString().split('T')[0]
+    fechaAbono: new Date().toISOString().split('T')[0],
+    tipoCalculo: 'mensual',
+    diasInteres: '30',
+    tasaInteresDiaria: '',
+    montoCalculado: ''
   });
   const [calculoPreview, setCalculoPreview] = useState<ReturnType<typeof calcularPrestamoDetallado> | null>(null);
   const [formPago, setFormPago] = useState({
@@ -875,48 +1082,69 @@ export default function SistemaPrestamosElegante() {
   const [historialesAbiertos, setHistorialesAbiertos] = useState<Record<string, boolean>>({});
   const [historialesCargando, setHistorialesCargando] = useState<Record<string, boolean>>({});
 
-  // Estados para búsqueda por fecha
-  const [clientesOriginalesCount, setClientesOriginalesCount] = useState<number>(0);
-  const [clientesOriginales, setClientesOriginales] = useState<Cliente[]>([]);
-  const [prestamosFiltradosPorFecha, setPrestamosFiltradosPorFecha] = useState<Cliente[]>([]);
+  // Estados para búsqueda inteligente de clientes por día de pago
+  const [searchInput, setSearchInput] = useState('');
+  const [clientSuggestions, setClientSuggestions] = useState<Cliente[]>([]);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [clientesFiltradosPorDia, setClientesFiltradosPorDia] = useState<Cliente[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [clientesEncontrados, setClientesEncontrados] = useState<Cliente[]>([]);
+  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
 
-  // Funciones de formateo actualizadas
+  // Funciones de formateo - MODIFICADO: Solo fecha sin hora
   const formatearFecha = (fecha: string) => {
     try {
-      // Si la fecha ya está en formato YYYY-MM-DD, usarla directamente
-      if (fecha && fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = fecha.split('-');
-        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      if (!fecha) return 'Fecha inválida';
+      
+      console.log(`🔄 Formateando fecha: ${fecha}`);
+      
+      const matchYYYYMMDD = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (matchYYYYMMDD) {
+        const [, year, month, day] = matchYYYYMMDD;
+        console.log(`✅ Formateado de YYYY-MM-DD a DD/MM/YYYY: ${day}/${month}/${year}`);
+        return `${day}/${month}/${year}`;
       }
-
+      
+      const matchDDMMYYYY = fecha.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (matchDDMMYYYY) {
+        return fecha;
+      }
+      
+      if (fecha.includes('T')) {
+        const fechaParte = fecha.split('T')[0];
+        const matchISO = fechaParte.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (matchISO) {
+          const [, year, month, day] = matchISO;
+          return `${day}/${month}/${year}`;
+        }
+      }
+      
+      console.warn(`⚠️ Usando Date para formatear: ${fecha}`);
       const fechaObj = new Date(fecha);
-
-      // Usar UTC para evitar problemas de zona horaria
-      const year = fechaObj.getUTCFullYear();
-      const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(fechaObj.getUTCDate()).padStart(2, '0');
-
+      
+      if (isNaN(fechaObj.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      const fechaLocal = new Date(
+        fechaObj.getFullYear(),
+        fechaObj.getMonth(),
+        fechaObj.getDate(),
+        12,
+        0,
+        0,
+        0
+      );
+      
+      const year = fechaLocal.getFullYear();
+      const month = String(fechaLocal.getMonth() + 1).padStart(2, '0');
+      const day = String(fechaLocal.getDate()).padStart(2, '0');
+      
+      console.log(`📊 Fecha formateada: ${day}/${month}/${year}`);
       return `${day}/${month}/${year}`;
     } catch (error) {
       console.error('❌ Error formateando fecha:', fecha, error);
-      return 'Fecha inválida';
-    }
-  };
-
-  const formatearFechaHora = (fecha: string) => {
-    try {
-      const fechaObj = new Date(fecha);
-
-      // Usar UTC para consistencia
-      const year = fechaObj.getUTCFullYear();
-      const month = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(fechaObj.getUTCDate()).padStart(2, '0');
-      const hours = String(fechaObj.getUTCHours()).padStart(2, '0');
-      const minutes = String(fechaObj.getUTCMinutes()).padStart(2, '0');
-
-      return `${day}/${month}/${year} ${hours}:${minutes}`;
-    } catch (error) {
-      console.error('❌ Error formateando fecha/hora:', fecha, error);
       return 'Fecha inválida';
     }
   };
@@ -930,7 +1158,270 @@ export default function SistemaPrestamosElegante() {
     }).format(monto);
   };
 
-  // Cargar clientes al inicio (sin historiales)
+  // 🔥 CORREGIDO: Función para manejar cambios en el tipo de cálculo
+  const manejarCambioTipoCalculo = (tipo: string) => {
+    if (!clienteSeleccionado) return;
+    
+    const nuevoEstado = {
+      ...formAbonoIntereses,
+      tipoCalculo: tipo
+    };
+    
+    if (tipo === 'mensual') {
+      // Interés mensual completo
+      nuevoEstado.diasInteres = '30';
+      nuevoEstado.montoCalculado = clienteSeleccionado.interesMensual?.toString() || '0';
+      nuevoEstado.montoAbono = nuevoEstado.montoCalculado;
+      nuevoEstado.observaciones = 'Pago de intereses mensuales completos (30 días)';
+    } else if (tipo === 'diario') {
+      // Porción proporcional - iniciar con 15 días (50% del mes)
+      const interesMensual = clienteSeleccionado.interesMensual || 0;
+      
+      // 🔥 USAR LA NUEVA FUNCIÓN
+      const porcion15Dias = calcularPorcionInteresesMensuales(interesMensual, 15);
+      
+      nuevoEstado.diasInteres = '15';
+      nuevoEstado.montoCalculado = porcion15Dias.toString();
+      nuevoEstado.montoAbono = porcion15Dias.toString();
+      nuevoEstado.observaciones = 'Pago de 15 días de intereses (50% del mes)';
+    } else if (tipo === 'acumulado') {
+      // Intereses acumulados
+      nuevoEstado.montoCalculado = clienteSeleccionado.interesesAcumulados?.toString() || '0';
+      nuevoEstado.montoAbono = nuevoEstado.montoCalculado;
+      nuevoEstado.observaciones = 'Pago de intereses acumulados';
+    }
+    
+    setFormAbonoIntereses(nuevoEstado);
+  };
+
+  // 🔥 CORREGIDO: Manejar cambios en los días - PORCIÓN PROPORCIONAL
+  const manejarCambioDiasInteres = (dias: string) => {
+    if (!clienteSeleccionado || formAbonoIntereses.tipoCalculo !== 'diario') return;
+    
+    const diasNum = parseInt(dias);
+    if (diasNum <= 0 || diasNum > 30) {
+      setFormAbonoIntereses({
+        ...formAbonoIntereses,
+        diasInteres: dias,
+        montoCalculado: '0',
+        montoAbono: '0',
+        observaciones: `Días inválidos (1-30 máximo)`
+      });
+      return;
+    }
+    
+    // Obtener interés mensual del cliente
+    const interesMensual = clienteSeleccionado.interesMensual || 0;
+    
+    // 🔥 USAR LA NUEVA FUNCIÓN
+    const porcionIntereses = calcularPorcionInteresesMensuales(interesMensual, diasNum);
+    
+    // Calcular porcentaje del mes
+    const porcentajeMes = Math.round((diasNum / 30) * 100);
+    
+    setFormAbonoIntereses({
+      ...formAbonoIntereses,
+      diasInteres: dias,
+      montoCalculado: porcionIntereses.toString(),
+      montoAbono: porcionIntereses.toString(),
+      observaciones: `Pago de ${diasNum} días de intereses (${porcentajeMes}% del mes) - ${formatearMoneda(porcionIntereses)}`
+    });
+  };
+
+  // Obtener día del próximo pago de un cliente
+  const obtenerDiaPagoCliente = (cliente: Cliente): number => {
+    try {
+      if (cliente.diaPago && cliente.diaPago > 0) {
+        return cliente.diaPago;
+      }
+
+      if (!cliente.fechaProximoPago) {
+        console.warn(`Cliente ${cliente.id} sin fechaProximoPago`);
+        return 0;
+      }
+
+      return obtenerDiaPagoDesdeFecha(cliente.fechaProximoPago);
+    } catch (error) {
+      console.error(`Error obteniendo día de pago para cliente ${cliente.id}:`, error);
+      return 0;
+    }
+  };
+
+  // Función para generar sugerencias en tiempo real
+  const generarSugerenciasClientes = (input: string) => {
+    if (!input.trim()) {
+      setClientSuggestions([]);
+      setSuggestionsVisible(false);
+      return;
+    }
+
+    const inputNumero = parseInt(input.replace(/\D/g, ''));
+    if (isNaN(inputNumero) || inputNumero < 1 || inputNumero > 31) {
+      setClientSuggestions([]);
+      setSuggestionsVisible(false);
+      return;
+    }
+
+    const sugerenciasLocales = clientes.filter(cliente => {
+      try {
+        const diaPago = obtenerDiaPagoCliente(cliente);
+        return diaPago === inputNumero;
+      } catch {
+        return false;
+      }
+    });
+
+    const sugerenciasMostrar = sugerenciasLocales.slice(0, 5);
+    setClientSuggestions(sugerenciasMostrar);
+    setSuggestionsVisible(sugerenciasMostrar.length > 0);
+
+    if (sugerenciasLocales.length < 5) {
+      const sugerenciasPorNombre = clientes
+        .filter(cliente =>
+          !sugerenciasLocales.some(c => c.id === cliente.id) &&
+          (
+            cliente.nombre.toLowerCase().includes(input.toLowerCase()) ||
+            cliente.apellido.toLowerCase().includes(input.toLowerCase()) ||
+            cliente.cedula.includes(input)
+          )
+        )
+        .slice(0, 5 - sugerenciasLocales.length);
+
+      setClientSuggestions(prev => [...prev, ...sugerenciasPorNombre]);
+      setSuggestionsVisible(true);
+    }
+  };
+
+  // Función para manejar el cambio en el input de búsqueda
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (!value.trim()) {
+      limpiarBusquedaDia();
+      return;
+    }
+
+    generarSugerenciasClientes(value);
+  };
+
+  // Función para seleccionar una sugerencia
+  const seleccionarSugerencia = (cliente: Cliente) => {
+    const diaPago = obtenerDiaPagoCliente(cliente);
+    
+    setSearchInput(diaPago.toString());
+    setClientesEncontrados([cliente]);
+    setClientesFiltradosPorDia([cliente]);
+    setIsSearchActive(true);
+    setSuggestionsVisible(false);
+    
+    mostrarExito(`✅ Mostrando: ${cliente.nombre} ${cliente.apellido} (paga el día ${diaPago})`);
+    
+    scrollToCliente(cliente.id);
+  };
+
+  // Función para hacer scroll al cliente seleccionado
+  const scrollToCliente = (clienteId: string) => {
+    setTimeout(() => {
+      const elemento = document.getElementById(`cliente-${clienteId}`);
+      if (elemento) {
+        elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        elemento.classList.add('cliente-seleccionado');
+        setTimeout(() => {
+          elemento.classList.remove('cliente-seleccionado');
+        }, 2000);
+      }
+    }, 100);
+  };
+
+  // Función para buscar clientes por día de pago
+  const buscarClientesPorDiaPago = async (dia: string, clienteEspecifico?: Cliente) => {
+    if (!dia.trim()) {
+      limpiarBusquedaDia();
+      return;
+    }
+
+    const diaNumero = parseInt(dia);
+    if (isNaN(diaNumero) || diaNumero < 1 || diaNumero > 31) {
+      mostrarError('❌ Ingresa un día válido (1-31)');
+      return;
+    }
+
+    setLoading(true);
+    setIsSearching(true);
+    setSuggestionsVisible(false);
+
+    try {
+      console.log(`🔍 Buscando clientes con pago el día ${diaNumero}...`);
+      
+      if (clienteEspecifico) {
+        setClientesEncontrados([clienteEspecifico]);
+        setClientesFiltradosPorDia([clienteEspecifico]);
+        setIsSearchActive(true);
+        mostrarExito(`✅ Mostrando: ${clienteEspecifico.nombre} ${clienteEspecifico.apellido}`);
+        scrollToCliente(clienteEspecifico.id);
+        return;
+      }
+      
+      const clientesFiltrados = await SistemaPrestamosService.obtenerClientesPorDiaPago(diaNumero);
+      
+      console.log(`✅ Encontrados ${clientesFiltrados.length} clientes con pago el día ${diaNumero}`);
+      
+      setClientesEncontrados(clientesFiltrados);
+      setClientesFiltradosPorDia(clientesFiltrados);
+      setIsSearchActive(true);
+      
+      if (clientesFiltrados.length === 0) {
+        mostrarExito(`ℹ️ No se encontraron clientes con pago el día ${diaNumero}`);
+      } else {
+        mostrarExito(`✅ ${clientesFiltrados.length} cliente(s) encontrado(s) con pago el día ${diaNumero}`);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error al buscar clientes por día:', error);
+      
+      const filtradosLocales = clienteEspecifico 
+        ? [clienteEspecifico]
+        : clientes.filter(cliente => {
+            const diaPago = cliente.diaPago || obtenerDiaPagoDesdeFecha(cliente.fechaProximoPago);
+            return diaPago === diaNumero;
+          });
+      
+      setClientesEncontrados(filtradosLocales);
+      setClientesFiltradosPorDia(filtradosLocales);
+      setIsSearchActive(true);
+      
+      if (filtradosLocales.length === 0) {
+        mostrarError(`❌ No se encontraron clientes con pago el día ${diaNumero}`);
+      } else {
+        mostrarExito(`✅ ${filtradosLocales.length} cliente(s) encontrado(s) con pago el día ${diaNumero} (búsqueda local)`);
+      }
+    } finally {
+      setLoading(false);
+      setIsSearching(false);
+    }
+  };
+
+  // Función para limpiar búsqueda
+  const limpiarBusquedaDia = () => {
+    setSearchInput('');
+    setClientSuggestions([]);
+    setClientesEncontrados([]);
+    setClientesFiltradosPorDia([]);
+    setIsSearchActive(false);
+    setIsSearching(false);
+    setSuggestionsVisible(false);
+
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
+
+    mostrarExito('✅ Mostrando todos los clientes');
+  };
+
+  // Cargar clientes al inicio
   useEffect(() => {
     const cargarClientes = async () => {
       try {
@@ -939,9 +1430,6 @@ export default function SistemaPrestamosElegante() {
 
         const clientesData = await SistemaPrestamosService.obtenerClientes();
         setClientes(clientesData);
-        setClientesOriginalesCount(clientesData.length);
-        setClientesOriginales([...clientesData]);
-        setPrestamosFiltradosPorFecha([]);
 
         console.log(`✅ Clientes cargados: ${clientesData.length}`);
 
@@ -956,6 +1444,19 @@ export default function SistemaPrestamosElegante() {
     cargarClientes();
   }, []);
 
+  // Actualizar sugerencias cuando cambia el input
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchInput.trim()) {
+        generarSugerenciasClientes(searchInput);
+      } else {
+        setSuggestionsVisible(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, clientes]);
+
   // Función para cargar historial de UN cliente específico
   const cargarHistorialCliente = async (clienteId: string) => {
     try {
@@ -964,15 +1465,12 @@ export default function SistemaPrestamosElegante() {
 
       const pagosCliente = await SistemaPrestamosService.obtenerPagosPorCliente(clienteId);
 
-      // Actualizar el estado de pagos solo para este cliente
       setPagos(prev => ({
         ...prev,
         [clienteId]: pagosCliente
       }));
 
       console.log(`✅ Historial cargado: ${pagosCliente.length} pagos para cliente ${clienteId}`);
-
-      // Abrir el historial después de cargarlo
       setHistorialesAbiertos(prev => ({ ...prev, [clienteId]: true }));
 
     } catch (error) {
@@ -987,10 +1485,8 @@ export default function SistemaPrestamosElegante() {
     const estaAbierto = historialesAbiertos[clienteId];
 
     if (!estaAbierto && !pagos[clienteId]) {
-      // Si no está abierto y no tenemos los datos, cargarlos
       await cargarHistorialCliente(clienteId);
     } else {
-      // Solo alternar visibilidad
       setHistorialesAbiertos(prev => ({
         ...prev,
         [clienteId]: !estaAbierto
@@ -998,52 +1494,93 @@ export default function SistemaPrestamosElegante() {
     }
   };
 
+  // Filtrar clientes según búsqueda normal
   const clientesFiltrados = useMemo(() => {
-    let filtered = [...clientes];
+    if (isSearchActive && clientesFiltradosPorDia.length > 0) {
+      let filtered = [...clientesFiltradosPorDia];
 
-    if (searchFilter !== 'todos') {
-      filtered = filtered.filter(cliente => cliente.estado === searchFilter);
+      if (searchFilter !== 'todos') {
+        filtered = filtered.filter(cliente => cliente.estado === searchFilter);
+      }
+
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(cliente =>
+          cliente.nombre.toLowerCase().includes(term) ||
+          cliente.apellido.toLowerCase().includes(term) ||
+          cliente.cedula.includes(term)
+        );
+      }
+
+      return filtered;
+    } else {
+      let filtered = [...clientes];
+
+      if (searchFilter !== 'todos') {
+        filtered = filtered.filter(cliente => cliente.estado === searchFilter);
+      }
+
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(cliente =>
+          cliente.nombre.toLowerCase().includes(term) ||
+          cliente.apellido.toLowerCase().includes(term) ||
+          cliente.cedula.includes(term) ||
+          cliente.telefono.includes(term) ||
+          cliente.email?.toLowerCase().includes(term) ||
+          cliente.direccion?.toLowerCase().includes(term) ||
+          `${cliente.nombre} ${cliente.apellido}`.toLowerCase().includes(term)
+        );
+      }
+
+      return filtered;
     }
+  }, [clientes, clientesFiltradosPorDia, isSearchActive, searchTerm, searchFilter]);
 
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(cliente =>
-        cliente.nombre.toLowerCase().includes(term) ||
-        cliente.apellido.toLowerCase().includes(term) ||
-        cliente.cedula.includes(term) ||
-        cliente.telefono.includes(term) ||
-        cliente.email?.toLowerCase().includes(term) ||
-        cliente.direccion?.toLowerCase().includes(term) ||
-        `${cliente.nombre} ${cliente.apellido}`.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [clientes, searchTerm, searchFilter]);
-
+  // Filtrar préstamos
   const prestamosFiltrados = useMemo(() => {
-    let filtered = [...clientes];
+    if (isSearchActive && clientesFiltradosPorDia.length > 0) {
+      let filtered = [...clientesFiltradosPorDia];
 
-    if (searchFilterPrestamos !== 'todos') {
-      filtered = filtered.filter(cliente => cliente.estado === searchFilterPrestamos);
+      if (searchFilterPrestamos !== 'todos') {
+        filtered = filtered.filter(cliente => cliente.estado === searchFilterPrestamos);
+      }
+
+      if (searchTermPrestamos.trim()) {
+        const term = searchTermPrestamos.toLowerCase().trim();
+        filtered = filtered.filter(cliente =>
+          cliente.nombre.toLowerCase().includes(term) ||
+          cliente.apellido.toLowerCase().includes(term) ||
+          cliente.cedula.includes(term)
+        );
+      }
+
+      return filtered;
+    } else {
+      let filtered = [...clientes];
+
+      if (searchFilterPrestamos !== 'todos') {
+        filtered = filtered.filter(cliente => cliente.estado === searchFilterPrestamos);
+      }
+
+      if (searchTermPrestamos.trim()) {
+        const term = searchTermPrestamos.toLowerCase().trim();
+        filtered = filtered.filter(cliente =>
+          cliente.nombre.toLowerCase().includes(term) ||
+          cliente.apellido.toLowerCase().includes(term) ||
+          cliente.cedula.includes(term) ||
+          cliente.telefono.includes(term) ||
+          cliente.email?.toLowerCase().includes(term) ||
+          cliente.direccion?.toLowerCase().includes(term) ||
+          `${cliente.nombre} ${cliente.apellido}`.toLowerCase().includes(term)
+        );
+      }
+
+      return filtered;
     }
+  }, [clientes, clientesFiltradosPorDia, isSearchActive, searchTermPrestamos, searchFilterPrestamos]);
 
-    if (searchTermPrestamos.trim()) {
-      const term = searchTermPrestamos.toLowerCase().trim();
-      filtered = filtered.filter(cliente =>
-        cliente.nombre.toLowerCase().includes(term) ||
-        cliente.apellido.toLowerCase().includes(term) ||
-        cliente.cedula.includes(term) ||
-        cliente.telefono.includes(term) ||
-        cliente.email?.toLowerCase().includes(term) ||
-        cliente.direccion?.toLowerCase().includes(term) ||
-        `${cliente.nombre} ${cliente.apellido}`.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [clientes, searchTermPrestamos, searchFilterPrestamos]);
-
+  // Calcular preview del préstamo
   const calcularPreview = () => {
     if (formData.montoPrestamo && formData.tasaInteres && formData.numeroCuotas) {
       const monto = parseFloat(formData.montoPrestamo);
@@ -1058,6 +1595,14 @@ export default function SistemaPrestamosElegante() {
       setCalculoPreview(null);
     }
   };
+
+  // Actualizar día de pago cuando cambia la fecha próxima
+  useEffect(() => {
+    if (formData.fechaProximoPago) {
+      const diaPago = obtenerDiaPagoDesdeFecha(formData.fechaProximoPago);
+      setFormData(prev => ({ ...prev, diaPago }));
+    }
+  }, [formData.fechaProximoPago]);
 
   useEffect(() => {
     calcularPreview();
@@ -1088,6 +1633,7 @@ export default function SistemaPrestamosElegante() {
       numeroCuotas: '',
       fechaPrestamo: new Date().toISOString().split('T')[0],
       fechaProximoPago: new Date().toISOString().split('T')[0],
+      diaPago: obtenerDiaPagoDesdeFecha(new Date().toISOString().split('T')[0]),
       observaciones: ''
     });
     setCalculoPreview(null);
@@ -1108,7 +1654,6 @@ export default function SistemaPrestamosElegante() {
       observaciones: `Pago cuota ${cuotaSugerida}`
     });
 
-    // Cargar historial del cliente para el modal de pago
     if (!pagos[cliente.id]) {
       await cargarHistorialCliente(cliente.id);
     }
@@ -1134,6 +1679,7 @@ export default function SistemaPrestamosElegante() {
       tasaInteres: cliente.tasaInteres.toString(),
       numeroCuotas: cliente.numeroCuotas.toString(),
       fechaProximoPago: cliente.fechaProximoPago || new Date().toISOString().split('T')[0],
+      diaPago: cliente.diaPago || obtenerDiaPagoDesdeFecha(cliente.fechaProximoPago || new Date().toISOString().split('T')[0]),
       observaciones: cliente.observaciones || '',
       saldoPendiente: cliente.saldoPendiente.toString(),
       interesesAcumulados: cliente.interesesAcumulados?.toString() || '0'
@@ -1146,185 +1692,75 @@ export default function SistemaPrestamosElegante() {
     setClienteSeleccionado(null);
   };
 
-const abrirModalAbonoIntereses = async (cliente: Cliente) => {
-  // 🔥 CORREGIR: Guardar una copia completa del cliente
-  setClienteSeleccionado({
-    ...cliente,
-    // Asegurar que todos los campos existan
-    id: cliente.id,
-    nombre: cliente.nombre,
-    apellido: cliente.apellido,
-    interesMensual: cliente.interesMensual || 0,
-    interesesAcumulados: cliente.interesesAcumulados || 0
-  });
+  const abrirModalAbonoIntereses = async (cliente: Cliente) => {
+    // 🔥 CORREGIDO: Mantener todos los datos del cliente
+    setClienteSeleccionado(cliente);
 
-  // Cargar historial si no existe
-  if (!pagos[cliente.id]) {
-    await cargarHistorialCliente(cliente.id);
-  }
-
-  const interesesSugeridos = cliente.interesMensual || 0;
-  const interesesAcumulados = cliente.interesesAcumulados || 0;
-
-  let tipoPorDefecto = 'intereses_mensuales';
-  let montoSugerido = interesesSugeridos;
-  let observacionesPorDefecto = 'Pago de intereses mensuales';
-
-  if (interesesAcumulados > 0) {
-    tipoPorDefecto = 'intereses_acumulados';
-    montoSugerido = interesesAcumulados;
-    observacionesPorDefecto = 'Pago de intereses acumulados';
-  }
-
-  setFormAbonoIntereses({
-    montoAbono: montoSugerido > 0 ? montoSugerido.toString() : '0',
-    tipo: tipoPorDefecto,
-    observaciones: observacionesPorDefecto,
-    fechaAbono: new Date().toISOString().split('T')[0]
-  });
-
-  setIsModalAbonoInteresesOpen(true);
-};
-
-const cerrarModalAbonoIntereses = () => {
-  setIsModalAbonoInteresesOpen(false);
-  // 🔥 NO limpiar clienteSeleccionado aquí
-  // Solo limpiar el formulario
-  setFormAbonoIntereses({
-    montoAbono: '',
-    tipo: 'intereses_mensuales',
-    observaciones: '',
-    fechaAbono: new Date().toISOString().split('T')[0]
-  });
-};
-
-
-
-  // Función de búsqueda por fecha de registro
-  const buscarPorFechaRegistro = async () => {
-    if (!fechaBusqueda) {
-      mostrarError('❌ Selecciona una fecha para buscar');
-      return;
+    if (!pagos[cliente.id]) {
+      await cargarHistorialCliente(cliente.id);
     }
 
-    try {
-      setLoading(true);
+    const interesMensual = cliente.interesMensual || 0;
+    const interesesAcumulados = cliente.interesesAcumulados || 0;
 
-      let todosClientes = [...clientesOriginales];
-      if (todosClientes.length === 0) {
-        todosClientes = await SistemaPrestamosService.obtenerClientes();
-        setClientesOriginales(todosClientes);
-        setClientesOriginalesCount(todosClientes.length);
-      }
+    // 🔥 CALCULAR PORCIÓN INICIAL DE 15 DÍAS USANDO LA NUEVA FUNCIÓN
+    const porcion15Dias = calcularPorcionInteresesMensuales(interesMensual, 15);
 
-      // Formatear la fecha de búsqueda para comparación
-      const fechaBuscarFormateada = formatearFechaParaBackend(fechaBusqueda);
+    setFormAbonoIntereses({
+      montoAbono: interesesAcumulados > 0 ? interesesAcumulados.toString() : porcion15Dias.toString(),
+      tipo: 'interes',
+      observaciones: interesesAcumulados > 0 ? 'Pago de intereses acumulados' : 'Pago de intereses por 15 días (50% del mes)',
+      fechaAbono: new Date().toISOString().split('T')[0],
+      tipoCalculo: interesesAcumulados > 0 ? 'acumulado' : 'diario',
+      diasInteres: '15',
+      tasaInteresDiaria: (calcularTasaDiaria(cliente.tasaInteres || 0) * 100).toFixed(4),
+      montoCalculado: interesesAcumulados > 0 ? interesesAcumulados.toString() : porcion15Dias.toString()
+    });
 
-      const prestamosEncontrados = todosClientes.filter(cliente => {
-        const fechaPrestamoFormateada = formatearFechaParaBackend(cliente.fechaPrestamo);
-        return fechaPrestamoFormateada === fechaBuscarFormateada;
-      });
-
-      if (prestamosEncontrados.length === 0) {
-        mostrarExito(`No se encontraron préstamos registrados el ${formatearFecha(fechaBusqueda)}`);
-        setClientes(todosClientes);
-        setPrestamosFiltradosPorFecha([]);
-      } else {
-        setClientes(todosClientes);
-        setPrestamosFiltradosPorFecha(prestamosEncontrados);
-
-        const mensaje = `✅ Encontrados ${prestamosEncontrados.length} préstamo(s) registrado(s) el ${formatearFecha(fechaBusqueda)}`;
-        mostrarExito(mensaje);
-
-        console.log('📅 Préstamos encontrados:', {
-          fecha: fechaBusqueda,
-          cantidad: prestamosEncontrados.length,
-          clientes: prestamosEncontrados.map(c => `${c.nombre} ${c.apellido} - ${c.fechaPrestamo}`)
-        });
-      }
-
-      setIsModalBusquedaFechaOpen(false);
-
-    } catch (error: any) {
-      mostrarError('❌ Error al buscar: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+    setIsModalAbonoInteresesOpen(true);
   };
 
-  // Función para limpiar búsqueda
-  const limpiarBusquedaFecha = async () => {
-    setFechaBusqueda('');
-    setPrestamosFiltradosPorFecha([]);
-    try {
-      setLoading(true);
-      const clientesData = await SistemaPrestamosService.obtenerClientes();
-      setClientes(clientesData);
-      setClientesOriginales([...clientesData]);
-      setClientesOriginalesCount(clientesData.length);
-      mostrarExito('✅ Mostrando todos los préstamos');
-    } catch (error: any) {
-      mostrarError('❌ Error al recargar clientes: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para verificar si un cliente tiene préstamo en la fecha buscada
-  const clienteTienePrestamoEnFecha = (clienteId: string) => {
-    return prestamosFiltradosPorFecha.some(prestamo => prestamo.id === clienteId);
-  };
-
-  // Función para obtener detalles del préstamo encontrado
-  const obtenerDetallePrestamoEncontrado = (clienteId: string) => {
-    const prestamoEncontrado = prestamosFiltradosPorFecha.find(p => p.id === clienteId);
-    if (prestamoEncontrado) {
-      return {
-        fecha: prestamoEncontrado.fechaPrestamo,
-        monto: prestamoEncontrado.montoPrestamo,
-        cuotas: prestamoEncontrado.numeroCuotas,
-        tasaInteres: prestamoEncontrado.tasaInteres,
-        cuotaMensual: prestamoEncontrado.cuotaMensual
-      };
-    }
-    return null;
+  const cerrarModalAbonoIntereses = () => {
+    setIsModalAbonoInteresesOpen(false);
+    setFormAbonoIntereses({
+      montoAbono: '',
+      tipo: 'interes',
+      observaciones: '',
+      fechaAbono: new Date().toISOString().split('T')[0],
+      tipoCalculo: 'mensual',
+      diasInteres: '30',
+      tasaInteresDiaria: '',
+      montoCalculado: ''
+    });
   };
 
   const manejarCambioInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    // Si es un campo de fecha, asegurarnos de que se guarde en formato YYYY-MM-DD
     if (name === 'fechaPrestamo' || name === 'fechaProximoPago') {
+      const nuevaFecha = value;
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: nuevaFecha,
+        ...(name === 'fechaProximoPago' ? { diaPago: obtenerDiaPagoDesdeFecha(nuevaFecha) } : {})
       }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
+  // Funciones CRUD
   const crearCliente = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       setLoading(true);
       setError(null);
 
-      console.log('🚀 Creando nuevo cliente...');
-      console.log('📅 DEBUG Fechas originales:', {
-        fechaPrestamoInput: formData.fechaPrestamo,
-        fechaProximoPagoInput: formData.fechaProximoPago
-      });
-
-      // Formatear fechas para backend
       const fechaPrestamoFormateada = formatearFechaParaBackend(formData.fechaPrestamo);
       const fechaProximoPagoFormateada = formatearFechaParaBackend(formData.fechaProximoPago);
 
-      console.log('📅 DEBUG Fechas formateadas:', {
-        fechaPrestamoFormateada,
-        fechaProximoPagoFormateada
-      });
+      const diaPago = obtenerDiaPagoDesdeFecha(fechaProximoPagoFormateada);
+      console.log(`📅 Día de pago calculado: ${diaPago} de la fecha ${fechaProximoPagoFormateada}`);
 
       const nuevoCliente = await SistemaPrestamosService.crearCliente({
         nombre: formData.nombre,
@@ -1336,21 +1772,13 @@ const cerrarModalAbonoIntereses = () => {
         montoPrestamo: parseFloat(formData.montoPrestamo),
         tasaInteres: parseFloat(formData.tasaInteres),
         numeroCuotas: parseInt(formData.numeroCuotas),
-        fechaPrestamo: formData.fechaPrestamo,
-        fechaProximoPago: formData.fechaProximoPago,
+        fechaPrestamo: fechaPrestamoFormateada,
+        fechaProximoPago: fechaProximoPagoFormateada,
+        diaPago: diaPago,
         observaciones: formData.observaciones
       });
 
-      console.log('🎉 Nuevo cliente creado:', nuevoCliente);
-      console.log('📅 Fechas recibidas del servidor:', {
-        fechaPrestamo: nuevoCliente.fechaPrestamo,
-        fechaProximoPago: nuevoCliente.fechaProximoPago
-      });
-
       setClientes(prev => [nuevoCliente, ...prev]);
-      setClientesOriginales(prev => [nuevoCliente, ...prev]);
-      setClientesOriginalesCount(prev => prev + 1);
-
       mostrarExito('✅ Cliente y préstamo registrado exitosamente');
       cerrarModalCliente();
 
@@ -1358,8 +1786,6 @@ const cerrarModalAbonoIntereses = () => {
         try {
           const clientesActualizados = await SistemaPrestamosService.obtenerClientes();
           setClientes(clientesActualizados);
-          setClientesOriginales([...clientesActualizados]);
-          setClientesOriginalesCount(clientesActualizados.length);
         } catch (error) {
           console.error('Error recargando datos:', error);
         }
@@ -1387,13 +1813,9 @@ const cerrarModalAbonoIntereses = () => {
       const cuotas = parseInt(formEditar.numeroCuotas);
       const cuotasPagadas = clienteSeleccionado.cuotasPagadas;
 
-      // IMPORTANTE: Obtener la nueva fecha de próximo pago
-      const fechaProximoPago = formEditar.fechaProximoPago || clienteSeleccionado.fechaProximoPago;
+      const fechaProximoPagoFormateada = formatearFechaParaBackend(formEditar.fechaProximoPago || clienteSeleccionado.fechaProximoPago);
+      const diaPago = obtenerDiaPagoDesdeFecha(fechaProximoPagoFormateada);
 
-      // NOTA: El cálculo de la fecha de registro se hará en el backend
-      // Solo enviamos la fecha de próximo pago
-
-      // Recalcular el saldo pendiente basado en el nuevo préstamo
       const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
       const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
       const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
@@ -1408,17 +1830,12 @@ const cerrarModalAbonoIntereses = () => {
         montoPrestamo: monto,
         tasaInteres: tasa,
         numeroCuotas: cuotas,
-        fechaProximoPago: fechaProximoPago, // Solo enviamos esta fecha
-        // NO enviamos fechaPrestamo, el backend la calculará
+        fechaProximoPago: fechaProximoPagoFormateada,
+        diaPago: diaPago,
         observaciones: formEditar.observaciones || '',
         saldoPendiente: saldoPendienteNuevo,
         interesesAcumulados: parseFloat(formEditar.interesesAcumulados) || clienteSeleccionado.interesesAcumulados || 0
       };
-
-      console.log('📊 Datos enviados para actualizar:', {
-        ...datosActualizados,
-        nota: 'Solo se envía fechaProximoPago, el backend calculará fechaPrestamo'
-      });
 
       const clienteActualizado = await SistemaPrestamosService.editarCliente(
         clienteSeleccionado.id,
@@ -1426,12 +1843,6 @@ const cerrarModalAbonoIntereses = () => {
       );
 
       setClientes(prev =>
-        prev.map(cliente =>
-          cliente.id === clienteSeleccionado.id ? clienteActualizado : cliente
-        )
-      );
-
-      setClientesOriginales(prev =>
         prev.map(cliente =>
           cliente.id === clienteSeleccionado.id ? clienteActualizado : cliente
         )
@@ -1463,158 +1874,81 @@ const cerrarModalAbonoIntereses = () => {
     }
   };
 
- const registrarAbonoIntereses = async (e: React.FormEvent) => {
-  e.preventDefault();
+  // 🔥 CORREGIDA: Registrar abono de intereses - CON ACTUALIZACIÓN CORRECTA
+  const registrarAbonoIntereses = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  // 🔥 CORREGIR: Verificar más detalladamente el cliente
-  if (!clienteSeleccionado || !clienteSeleccionado.id) {
-    console.error('❌ Cliente seleccionado inválido:', clienteSeleccionado);
-    mostrarError('❌ Error: No hay cliente válido seleccionado');
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError(null);
-
-    const fechaAbonoReal = formAbonoIntereses.fechaAbono || new Date().toISOString().split('T')[0];
-
-    console.log('📅 Fecha a usar:', fechaAbonoReal);
-    console.log('🔍 Cliente seleccionado:', {
-      id: clienteSeleccionado.id,
-      nombre: clienteSeleccionado.nombre,
-      tieneId: !!clienteSeleccionado.id
-    });
-
-    const monto = parseFloat(formAbonoIntereses.montoAbono);
-    if (!monto || monto <= 0) {
-      mostrarError('❌ Ingresa un monto válido');
-      setLoading(false);
+    if (!clienteSeleccionado || !clienteSeleccionado.id) {
+      console.error('❌ Cliente seleccionado inválido:', clienteSeleccionado);
+      mostrarError('❌ Error: No hay cliente válido seleccionado');
       return;
     }
 
-    // NO modificar el tipo automáticamente - usar el que el usuario seleccionó
-    const tipoAbono = formAbonoIntereses.tipo;
-    const observaciones = formAbonoIntereses.observaciones || 
-      (tipoAbono === 'intereses_mensuales' 
-        ? 'Pago de intereses mensuales' 
-        : 'Pago de intereses acumulados');
+    try {
+      setLoading(true);
+      setError(null);
 
-    // 🔥 CORREGIR: Asegurar que el clienteId sea string válido
-    const abonoData = {
-      clienteId: clienteSeleccionado.id.toString(), // Convertir a string explícitamente
-      montoAbono: monto.toString(),
-      tipo: tipoAbono,
-      observaciones: observaciones,
-      fechaAbono: fechaAbonoReal,
-      metodoPago: 'Efectivo' // Agregar campo requerido por backend
-    };
-
-    console.log('📤 Enviando abono (JSON):', JSON.stringify(abonoData, null, 2));
-    console.log('📤 Enviando abono (objeto):', abonoData);
-
-    const response = await fetch('/api/abonos-intereses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(abonoData)
-    });
-
-    // 🔥 MEJOR MANEJO DE ERRORES
-    if (!response.ok) {
-      let errorMessage = 'Error al registrar abono';
-      try {
-        const errorData = await response.json();
-        console.error('❌ Error del servidor:', errorData);
-        
-        // Mensajes más específicos
-        if (errorData.camposFaltantes) {
-          errorMessage = `Campos faltantes: ${errorData.camposFaltantes.join(', ')}`;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        }
-        
-        // Mostrar datos recibidos por el servidor para depuración
-        if (errorData.datosRecibidos) {
-          console.error('📊 Datos recibidos por el servidor:', errorData.datosRecibidos);
-        }
-      } catch (e) {
-        const errorText = await response.text();
-        console.error('❌ Error texto crudo:', errorText);
-        errorMessage = `Error ${response.status}: ${response.statusText}`;
+      const fechaAbonoReal = formAbonoIntereses.fechaAbono || new Date().toISOString().split('T')[0];
+      const monto = parseFloat(formAbonoIntereses.montoAbono);
+      
+      if (!monto || monto <= 0) {
+        mostrarError('❌ Ingresa un monto válido');
+        setLoading(false);
+        return;
       }
-      throw new Error(errorMessage);
-    }
 
-    const result = await response.json();
-    console.log('✅ Resultado abono:', result);
+      // Preparar datos para el abono
+      const abonoData = {
+        clienteId: clienteSeleccionado.id,
+        montoAbono: monto.toString(),
+        tipo: 'intereses',
+        observaciones: formAbonoIntereses.observaciones,
+        fechaAbono: fechaAbonoReal
+      };
 
-    if (!result.success) {
-      throw new Error(result.error || 'Error en la respuesta del servidor');
-    }
+      console.log('🔍 Enviando abono de intereses:', abonoData);
 
-    // 🔥 ACTUALIZAR EL CLIENTE CON LOS DATOS DEL BACKEND
-    if (result.data && result.data.prestamo) {
+      // Usar el servicio existente para registrar abono
+      const result = await SistemaPrestamosService.registrarAbonoIntereses(abonoData);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error al registrar abono');
+      }
+
+      console.log('✅ Abono registrado exitosamente:', result);
+
+      // 🔥 CORREGIDO: Actualizar el estado local manteniendo todos los datos del cliente
       setClientes(prev =>
         prev.map(cliente => {
           if (cliente.id === clienteSeleccionado.id) {
+            // Mantener todos los datos originales del cliente y solo actualizar los campos necesarios
             return {
-              ...cliente,
-              saldoPendiente: result.data.prestamo.saldoPendiente,
-              interesesAcumulados: result.data.prestamo.interesesAcumulados,
-              estado: result.data.prestamo.estado,
-              cuotasPagadas: result.data.prestamo.cuotasPagadas,
-              fechaProximoPago: result.data.prestamo.fechaProximoPago || cliente.fechaProximoPago
+              ...cliente, // 🔥 Esto mantiene nombre, apellido, cédula, teléfono, etc.
+              saldoPendiente: result.data.prestamo?.saldoPendiente || cliente.saldoPendiente,
+              interesesAcumulados: result.data.prestamo?.interesesAcumulados || cliente.interesesAcumulados,
+              estado: result.data.prestamo?.estado || cliente.estado,
+              fechaProximoPago: result.data.prestamo?.fechaProximoPago || cliente.fechaProximoPago
             };
           }
           return cliente;
         })
       );
 
-      setClientesOriginales(prev =>
-        prev.map(cliente => {
-          if (cliente.id === clienteSeleccionado.id) {
-            return {
-              ...cliente,
-              saldoPendiente: result.data.prestamo.saldoPendiente,
-              interesesAcumulados: result.data.prestamo.interesesAcumulados,
-              estado: result.data.prestamo.estado,
-              cuotasPagadas: result.data.prestamo.cuotasPagadas,
-              fechaProximoPago: result.data.prestamo.fechaProximoPago || cliente.fechaProximoPago
-            };
-          }
-          return cliente;
-        })
-      );
+      mostrarExito(`✅ Abono de intereses de ${formatearMoneda(monto)} registrado exitosamente`);
+      
+      // Cargar historial actualizado
+      await cargarHistorialCliente(clienteSeleccionado.id);
+      
+      // Cerrar modal
+      cerrarModalAbonoIntereses();
+
+    } catch (err: any) {
+      console.error('❌ Error completo en registrarAbonoIntereses:', err);
+      mostrarError('❌ ' + (err.message || 'Error al registrar abono'));
+    } finally {
+      setLoading(false);
     }
-
-    mostrarExito(`✅ Abono de intereses de ${formatearMoneda(monto)} registrado exitosamente`);
-
-    // 🔥 NO cerrar el modal automáticamente - solo limpiar el formulario
-    setFormAbonoIntereses({
-      montoAbono: '',
-      tipo: 'intereses_mensuales',
-      observaciones: '',
-      fechaAbono: new Date().toISOString().split('T')[0]
-    });
-
-    // 🔥 Recargar historial después del abono
-    await cargarHistorialCliente(clienteSeleccionado.id);
-
-  } catch (err: any) {
-    console.error('❌ Error completo en registrarAbonoIntereses:', {
-      message: err.message,
-      clienteSeleccionado: clienteSeleccionado,
-      datosFormulario: formAbonoIntereses
-    });
-
-    mostrarError('❌ ' + (err.message || 'Error al registrar abono'));
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const registrarPago = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1624,13 +1958,6 @@ const cerrarModalAbonoIntereses = () => {
     try {
       setLoading(true);
       setError(null);
-
-      console.log('💰 Registrando pago para cliente:', {
-        id: clienteSeleccionado.id,
-        nombre: clienteSeleccionado.nombre + ' ' + clienteSeleccionado.apellido,
-        cuotaMensual: clienteSeleccionado.cuotaMensual,
-        cuotasPagadas: clienteSeleccionado.cuotasPagadas
-      });
 
       const montoPagado = parseFloat(formPago.montoPagado) || clienteSeleccionado.cuotaMensual;
       const cuotaNumero = parseInt(formPago.cuotaNumero) || (clienteSeleccionado.cuotasPagadas + 1);
@@ -1647,14 +1974,6 @@ const cerrarModalAbonoIntereses = () => {
         return;
       }
 
-      console.log('📋 Datos del pago a enviar:', {
-        clienteId: clienteSeleccionado.id,
-        montoPagado,
-        cuotaNumero,
-        fechaPago: formPago.fechaPago,
-        observaciones: formPago.observaciones
-      });
-
       const nuevoPago = await SistemaPrestamosService.registrarPago({
         clienteId: clienteSeleccionado.id,
         montoPagado: montoPagado,
@@ -1663,8 +1982,7 @@ const cerrarModalAbonoIntereses = () => {
         observaciones: formPago.observaciones
       });
 
-      console.log('✅ Pago registrado exitosamente:', nuevoPago);
-
+      // 🔥 CORREGIDO: Actualizar cliente manteniendo todos los datos
       const clienteActualizado = await SistemaPrestamosService.obtenerClientePorId(clienteSeleccionado.id);
 
       setClientes(prev =>
@@ -1673,13 +1991,6 @@ const cerrarModalAbonoIntereses = () => {
         )
       );
 
-      setClientesOriginales(prev =>
-        prev.map(cliente =>
-          cliente.id === clienteSeleccionado.id ? clienteActualizado : cliente
-        )
-      );
-
-      // Actualizar el historial local
       if (pagos[clienteSeleccionado.id]) {
         setPagos(prev => ({
           ...prev,
@@ -1688,15 +1999,10 @@ const cerrarModalAbonoIntereses = () => {
       }
 
       mostrarExito(`✅ Pago de ${formatearMoneda(montoPagado)} registrado exitosamente (Cuota ${cuotaNumero})`);
-
       cerrarModalPago();
 
     } catch (err: any) {
-      console.error('❌ Error registrando pago:', {
-        message: err.message,
-        stack: err.stack
-      });
-
+      console.error('❌ Error registrando pago:', err);
       mostrarError(err.message || 'Error al registrar el pago');
     } finally {
       setLoading(false);
@@ -1721,24 +2027,22 @@ const cerrarModalAbonoIntereses = () => {
     setShowConfirmModal(true);
   };
 
+  // MODIFICADA: Eliminar cliente y todo su historial
   const eliminarCliente = async (clienteId: string) => {
     try {
       setLoading(true);
-      console.log('🗑️ Eliminando cliente:', clienteId);
 
       await SistemaPrestamosService.eliminarCliente(clienteId);
 
       setClientes(prev => prev.filter(cliente => cliente.id !== clienteId));
-      setClientesOriginales(prev => prev.filter(cliente => cliente.id !== clienteId));
-      setClientesOriginalesCount(prev => prev - 1);
+      setClientesFiltradosPorDia(prev => prev.filter(cliente => cliente.id !== clienteId));
 
-      // Limpiar pagos del cliente eliminado
+      // Limpiar todos los datos relacionados con este cliente
       setPagos(prev => {
         const { [clienteId]: _, ...rest } = prev;
         return rest;
       });
 
-      // Limpiar estados de historial
       setHistorialesAbiertos(prev => {
         const { [clienteId]: _, ...rest } = prev;
         return rest;
@@ -1749,9 +2053,7 @@ const cerrarModalAbonoIntereses = () => {
         return rest;
       });
 
-      setPrestamosFiltradosPorFecha(prev => prev.filter(prestamo => prestamo.id !== clienteId));
-
-      mostrarExito('✅ Cliente eliminado exitosamente');
+      mostrarExito('✅ Cliente y todo su historial eliminados exitosamente');
 
     } catch (err: any) {
       console.error('❌ Error al eliminar:', err);
@@ -1763,7 +2065,6 @@ const cerrarModalAbonoIntereses = () => {
   const marcarEnMora = async (clienteId: string) => {
     try {
       setLoading(true);
-      console.log(`🔄 Marcando cliente ${clienteId} en mora...`);
 
       await SistemaPrestamosService.marcarEnMora(clienteId);
 
@@ -1773,13 +2074,7 @@ const cerrarModalAbonoIntereses = () => {
         )
       );
 
-      setClientesOriginales(prev =>
-        prev.map(cliente =>
-          cliente.id === clienteId ? { ...cliente, estado: 'mora' } : cliente
-        )
-      );
-
-      setPrestamosFiltradosPorFecha(prev =>
+      setClientesFiltradosPorDia(prev =>
         prev.map(cliente =>
           cliente.id === clienteId ? { ...cliente, estado: 'mora' } : cliente
         )
@@ -1789,18 +2084,8 @@ const cerrarModalAbonoIntereses = () => {
 
     } catch (err: any) {
       console.error('❌ Error detallado marcando en mora:', err);
-
       let mensajeError = err.message || 'Error al marcar en mora';
-
-      if (err.message.includes('404')) {
-        mensajeError = '❌ Cliente no encontrado. Por favor, recarga la página.';
-      } else if (err.message.includes('500')) {
-        mensajeError = '❌ Error del servidor. Intenta nuevamente.';
-      } else if (err.message.includes('JSON')) {
-        mensajeError = '❌ Error en la respuesta del servidor. Verifica que la API esté funcionando.';
-      }
-
-      mostrarError(mensajeError);
+      throw new Error(mensajeError);
     } finally {
       setLoading(false);
     }
@@ -1862,7 +2147,6 @@ const cerrarModalAbonoIntereses = () => {
 
   return (
     <div className="sistema-prestamos">
-
       {/* Header */}
       <header className="sectionTop">
         <div className="logo-container">
@@ -1880,30 +2164,116 @@ const cerrarModalAbonoIntereses = () => {
           </div>
         </div>
 
-        {/* Botón para buscar por fecha de registro */}
-        <div className="busqueda-fecha-container">
-          <button
-            className="btn-buscar-fecha"
-            onClick={() => setIsModalBusquedaFechaOpen(true)}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            Buscar por fecha de préstamo
-          </button>
-
-          {fechaBusqueda && (
-            <button
-              className="btn-limpiar-busqueda"
-              onClick={limpiarBusquedaFecha}
-              disabled={loading}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+        {/* Buscador inteligente */}
+        <div className="buscador-clientes-dia">
+          <div className="search-input-with-suggestions">
+            <div className="search-icon-container">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
-              Limpiar búsqueda
+            </div>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              onFocus={() => searchInput.trim() && setSuggestionsVisible(true)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  buscarClientesPorDiaPago(searchInput);
+                  setSuggestionsVisible(false);
+                }
+              }}
+              placeholder="Buscar por día de pago (ej: 15) o nombre..."
+              className="search-day-input"
+              maxLength={30}
+            />
+
+            {/* Mostrar spinner cuando está buscando */}
+            {isSearching && (
+              <div className="search-loading-spinner">
+                <div className="spinner-small"></div>
+              </div>
+            )}
+
+            {/* Botón de búsqueda */}
+            <button
+              className="btn-buscar-dia"
+              onClick={() => {
+                buscarClientesPorDiaPago(searchInput);
+                setSuggestionsVisible(false);
+              }}
+              disabled={loading || isSearching}
+            >
+              {isSearching ? (
+                <div className="spinner-small"></div>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              )}
             </button>
-          )}
+
+            {/* Botón de limpiar si hay búsqueda activa */}
+            {(isSearchActive || searchInput) && (
+              <button
+                className="btn-limpiar-dia"
+                onClick={limpiarBusquedaDia}
+                disabled={loading || isSearching}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            )}
+
+            {/* Sugerencias de CLIENTES */}
+            {suggestionsVisible && clientSuggestions.length > 0 && (
+              <div className="suggestions-dropdown client-suggestions">
+                <div className="suggestions-header">
+                  <span>Sugerencias</span>
+                  <small>{clientSuggestions.length} sugerencia(s)</small>
+                </div>
+                {clientSuggestions.map((cliente) => (
+                  <div
+                    key={cliente.id}
+                    className="suggestion-item client-suggestion"
+                    onClick={() => seleccionarSugerencia(cliente)}
+                  >
+                    <div className="suggestion-icon cliente-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                    </div>
+                    <div className="suggestion-text">
+                      <span className="suggestion-title">{cliente.nombre} {cliente.apellido}</span>
+                      <span className="suggestion-subtitle">
+                        <div>Cédula: {cliente.cedula}</div>
+                        <div>Próximo pago: {formatearFecha(cliente.fechaProximoPago)}</div>
+                        <div>Día de pago: {obtenerDiaPagoCliente(cliente)}</div>
+                        <div>Monto: {formatearMoneda(cliente.montoPrestamo)}</div>
+                      </span>
+                    </div>
+                    <div className="suggestion-action">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+                <div className="suggestion-footer">
+                  <button
+                    className="btn-ver-todos"
+                    onClick={() => {
+                      buscarClientesPorDiaPago(searchInput);
+                      setSuggestionsVisible(false);
+                    }}
+                  >
+                    Buscar todos con día {searchInput}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <nav className="optionsMain">
@@ -1926,8 +2296,8 @@ const cerrarModalAbonoIntereses = () => {
         </nav>
       </header>
 
-      {/* Indicador de búsqueda activa */}
-      {fechaBusqueda && (
+      {/* Indicador de búsqueda activa por día */}
+      {isSearchActive && clientesFiltradosPorDia.length > 0 && (
         <div className="indicador-busqueda-activa">
           <div className="indicador-content">
             <div className="indicador-icono">
@@ -1936,14 +2306,12 @@ const cerrarModalAbonoIntereses = () => {
               </svg>
             </div>
             <div className="indicador-texto">
-              <strong>Búsqueda activa:</strong> Mostrando préstamos registrados el {formatearFecha(fechaBusqueda)}
-              <span className="indicador-contador">
-                ({prestamosFiltradosPorFecha.length} préstamo(s) encontrado(s))
-              </span>
+              <strong>Búsqueda activa por día de pago:</strong>
+              Mostrando {clientesFiltradosPorDia.length} cliente(s) con pago el día {searchInput}
             </div>
             <button
               className="indicador-cerrar"
-              onClick={limpiarBusquedaFecha}
+              onClick={limpiarBusquedaDia}
               disabled={loading}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2023,7 +2391,7 @@ const cerrarModalAbonoIntereses = () => {
 
                 <p className="confirm-details">
                   {confirmAction.type === 'delete'
-                    ? 'Esta acción no se puede deshacer.'
+                    ? 'Esta acción no se puede deshacer. Se eliminarán todos los datos del cliente, préstamos y pagos asociados.'
                     : 'Esta acción cambiará el estado del cliente y sus préstamos pendientes a "mora".'
                   }
                 </p>
@@ -2048,7 +2416,7 @@ const cerrarModalAbonoIntereses = () => {
                       <span>PROCESANDO...</span>
                     </>
                   ) : (
-                    confirmAction.type === 'delete' ? 'ELIMINAR' : 'MARCAR EN MORA'
+                    confirmAction.type === 'delete' ? 'ELIMINAR DEFINITIVAMENTE' : 'MARCAR EN MORA'
                   )}
                 </button>
               </div>
@@ -2130,12 +2498,9 @@ const cerrarModalAbonoIntereses = () => {
                 <div>
                   <h2>Préstamos Pendientes</h2>
                   <div className="contador-activos">
-                    {clientes.filter(c => c.estado === 'pendiente').length} pendientes
-                    {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
-                      <span className="contador-filtro">
-                        ({prestamosFiltradosPorFecha.length} con préstamo en {formatearFecha(fechaBusqueda)})
-                      </span>
-                    )}
+                    {isSearchActive
+                      ? `${clientesFiltrados.length} encontrado(s) (día ${searchInput})`
+                      : `${clientes.filter(c => c.estado === 'pendiente').length} pendientes`}
                   </div>
                 </div>
 
@@ -2169,10 +2534,22 @@ const cerrarModalAbonoIntereses = () => {
                     <div className="filterLabel">Filtrar:</div>
                     <div className="filterButtons">
                       {[
-                        { value: 'todos', label: 'Todos', count: clientes.length },
-                        { value: 'pendiente', label: 'Pendientes', count: clientes.filter(c => c.estado === 'pendiente').length },
-                        { value: 'pagado', label: 'Pagados', count: clientes.filter(c => c.estado === 'pagado').length },
-                        { value: 'mora', label: 'En Mora', count: clientes.filter(c => c.estado === 'mora').length }
+                        { value: 'todos', label: 'Todos', count: isSearchActive ? clientesFiltradosPorDia.length : clientes.length },
+                        {
+                          value: 'pendiente', label: 'Pendientes', count: isSearchActive
+                            ? clientesFiltradosPorDia.filter(c => c.estado === 'pendiente').length
+                            : clientes.filter(c => c.estado === 'pendiente').length
+                        },
+                        {
+                          value: 'pagado', label: 'Pagados', count: isSearchActive
+                            ? clientesFiltradosPorDia.filter(c => c.estado === 'pagado').length
+                            : clientes.filter(c => c.estado === 'pagado').length
+                        },
+                        {
+                          value: 'mora', label: 'En Mora', count: isSearchActive
+                            ? clientesFiltradosPorDia.filter(c => c.estado === 'mora').length
+                            : clientes.filter(c => c.estado === 'mora').length
+                        }
                       ].map(filter => (
                         <button
                           key={filter.value}
@@ -2188,7 +2565,7 @@ const cerrarModalAbonoIntereses = () => {
                 </div>
               </div>
 
-              {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
+              {isSearchActive && clientesFiltradosPorDia.length > 0 && (
                 <div className="info-filtro-fecha">
                   <div className="icono-info-filtro">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2196,9 +2573,9 @@ const cerrarModalAbonoIntereses = () => {
                     </svg>
                   </div>
                   <p>
-                    <strong>Filtro activo:</strong> Mostrando todos los clientes.
+                    <strong>Filtro activo por día de pago:</strong> Mostrando clientes con pago el día {searchInput}
                     <span className="clientes-destacados">
-                      {prestamosFiltradosPorFecha.length} cliente(s) tienen préstamos registrados el {formatearFecha(fechaBusqueda)}
+                      ({clientesFiltradosPorDia.length} cliente(s) encontrado(s))
                     </span>
                   </p>
                 </div>
@@ -2207,7 +2584,9 @@ const cerrarModalAbonoIntereses = () => {
               {searchTerm && (
                 <div className="searchResultsInfo">
                   <p>
-                    Mostrando {clientesFiltrados.filter(c => c.estado === 'pendiente').length} préstamo(s) pendiente(s)
+                    Mostrando {clientesFiltrados.filter(c =>
+                      searchFilter === 'todos' ? c.estado === 'pendiente' : c.estado === searchFilter
+                    ).length} préstamo(s) pendiente(s)
                     {searchTerm && ` para "${searchTerm}"`}
                   </p>
                 </div>
@@ -2220,20 +2599,20 @@ const cerrarModalAbonoIntereses = () => {
                   {clientesFiltrados.filter(c =>
                     searchFilter === 'todos' ? c.estado === 'pendiente' : c.estado === searchFilter
                   ).map(cliente => {
-                    const tienePrestamoEnFecha = clienteTienePrestamoEnFecha(cliente.id);
-                    const detallePrestamo = obtenerDetallePrestamoEncontrado(cliente.id);
+                    const tienePrestamoEnFecha = clientesFiltradosPorDia.some(c => c.id === cliente.id);
 
                     return (
                       <div
                         key={cliente.id}
+                        id={`cliente-${cliente.id}`}
                         className={`prestamoCard ${tienePrestamoEnFecha ? 'destacado-filtro' : ''}`}
                       >
                         {tienePrestamoEnFecha && (
                           <div className="badge-filtro-fecha">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
-                            Préstamo registrado el {formatearFecha(fechaBusqueda)}
+                            Pago el día {searchInput}
                           </div>
                         )}
 
@@ -2266,10 +2645,13 @@ const cerrarModalAbonoIntereses = () => {
                                 </svg>
                                 Próximo pago: {formatearFecha(cliente.fechaProximoPago)}
                               </div>
-                              {tienePrestamoEnFecha && detallePrestamo && (
+                              {tienePrestamoEnFecha && (
                                 <div className="info-prestamo-fecha">
                                   <span className="monto-prestamo-filtro">
-                                    <strong>Préstamo encontrado:</strong> {formatearMoneda(detallePrestamo.monto)} - {detallePrestamo.cuotas} cuotas
+                                    <strong>Préstamo:</strong> {formatearMoneda(cliente.montoPrestamo)} - {cliente.numeroCuotas} cuotas
+                                  </span>
+                                  <span className="dia-pago-filtro">
+                                    <strong>Día de pago:</strong> {obtenerDiaPagoCliente(cliente)}
                                   </span>
                                 </div>
                               )}
@@ -2327,18 +2709,21 @@ const cerrarModalAbonoIntereses = () => {
                   </div>
                   <h3>No se encontraron resultados</h3>
                   <p>
-                    {searchFilter === 'todos'
-                      ? 'No hay préstamos pendientes'
-                      : `No hay préstamos con estado "${searchFilter}"`
+                    {isSearchActive
+                      ? `No hay clientes con pago el día ${searchInput}`
+                      : searchFilter === 'todos'
+                        ? 'No hay préstamos pendientes'
+                        : `No hay préstamos con estado "${searchFilter}"`
                     }
                     {searchTerm && ` que coincidan con "${searchTerm}"`}
                   </p>
-                  {(searchTerm || searchFilter !== 'todos') && (
+                  {(searchTerm || searchFilter !== 'todos' || isSearchActive) && (
                     <button
                       className="clearSearchButton"
                       onClick={() => {
                         setSearchTerm('');
                         setSearchFilter('todos');
+                        if (isSearchActive) limpiarBusquedaDia();
                       }}
                     >
                       Limpiar filtros
@@ -2359,9 +2744,9 @@ const cerrarModalAbonoIntereses = () => {
                   <h2>Lista de Clientes</h2>
                   <div className="contador-clientes">
                     {clientesFiltrados.length} de {clientes.length} clientes
-                    {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
+                    {isSearchActive && clientesFiltradosPorDia.length > 0 && (
                       <span className="contador-filtro">
-                        ({prestamosFiltradosPorFecha.length} con préstamo en {formatearFecha(fechaBusqueda)})
+                        ({clientesFiltradosPorDia.length} con pago el día {searchInput})
                       </span>
                     )}
                   </div>
@@ -2376,7 +2761,7 @@ const cerrarModalAbonoIntereses = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="Buscar por nombre, cédula, teléfono, email, dirección..."
+                      placeholder="Buscar por nombre, cédula, teléfono..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="searchInput"
@@ -2416,7 +2801,7 @@ const cerrarModalAbonoIntereses = () => {
                 </div>
               </div>
 
-              {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
+              {isSearchActive && clientesFiltradosPorDia.length > 0 && (
                 <div className="info-filtro-fecha">
                   <div className="icono-info-filtro">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2424,9 +2809,9 @@ const cerrarModalAbonoIntereses = () => {
                     </svg>
                   </div>
                   <p>
-                    <strong>Filtro activo:</strong> Mostrando todos los clientes.
+                    <strong>Filtro activo por día de pago:</strong> Mostrando clientes con pago el día {searchInput}
                     <span className="clientes-destacados">
-                      {prestamosFiltradosPorFecha.length} cliente(s) tienen préstamos registrados el {formatearFecha(fechaBusqueda)}
+                      ({clientesFiltradosPorDia.length} cliente(s) encontrado(s))
                     </span>
                   </p>
                 </div>
@@ -2460,14 +2845,14 @@ const cerrarModalAbonoIntereses = () => {
                 <div className="clientes-lista">
                   {clientesFiltrados.map(cliente => {
                     const pagosCliente = pagos[cliente.id] || [];
-                    const tienePrestamoEnFecha = clienteTienePrestamoEnFecha(cliente.id);
-                    const detallePrestamo = obtenerDetallePrestamoEncontrado(cliente.id);
+                    const tienePrestamoEnFecha = clientesFiltradosPorDia.some(c => c.id === cliente.id);
                     const historialAbierto = historialesAbiertos[cliente.id] || false;
                     const historialCargando = historialesCargando[cliente.id] || false;
 
                     return (
                       <div
                         key={cliente.id}
+                        id={`cliente-${cliente.id}`}
                         className={`clienteCard ${tienePrestamoEnFecha ? 'destacado-filtro' : ''}`}
                       >
                         {tienePrestamoEnFecha && (
@@ -2475,7 +2860,7 @@ const cerrarModalAbonoIntereses = () => {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Préstamo registrado el {formatearFecha(fechaBusqueda)}
+                            Pago el día {searchInput}
                           </div>
                         )}
 
@@ -2508,14 +2893,13 @@ const cerrarModalAbonoIntereses = () => {
                                     </svg>
                                     {formatearFecha(cliente.fechaProximoPago)}
                                   </span>
+                                  <span className="dia-pago">
+                                    <svg className="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Día: {obtenerDiaPagoCliente(cliente)}
+                                  </span>
                                 </div>
-                                {tienePrestamoEnFecha && detallePrestamo && (
-                                  <div className="info-prestamo-fecha">
-                                    <span className="monto-prestamo-filtro">
-                                      <strong>Préstamo encontrado:</strong> {formatearMoneda(detallePrestamo.monto)} - {detallePrestamo.tasaInteres}% interés - {detallePrestamo.cuotas} cuotas
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                               <span className={`estadoBadge estado-${cliente.estado}`}>
                                 {cliente.estado === 'pendiente' ? 'Pendiente' :
@@ -2586,7 +2970,7 @@ const cerrarModalAbonoIntereses = () => {
                               </button>
                             </div>
 
-                            {/* CONTENIDO DEL HISTORIAL (solo se muestra si está abierto) */}
+                            {/* CONTENIDO DEL HISTORIAL - MODIFICADO: Solo fecha sin hora */}
                             {historialAbierto && (
                               <div className="historialContenido">
                                 {pagosCliente.length > 0 ? (
@@ -2595,7 +2979,7 @@ const cerrarModalAbonoIntereses = () => {
                                       <thead>
                                         <tr>
                                           <th>Cuota</th>
-                                          <th>Fecha Real</th>
+                                          <th>Fecha</th> {/* MODIFICADO: Cambiado de "Fecha Real" a "Fecha" */}
                                           <th>Capital</th>
                                           <th>Interés</th>
                                           <th>Total</th>
@@ -2611,17 +2995,10 @@ const cerrarModalAbonoIntereses = () => {
                                               <td>
                                                 <div className="fecha-pago-detalle">
                                                   <div className="fecha-principal">
+                                                    {/* MODIFICADO: Solo mostrar la fecha formateada */}
                                                     {formatearFecha(pago.fechaPago)}
                                                   </div>
-                                                  <div className="hora-pago">
-                                                    <small>
-                                                      {new Date(pago.fechaPago).toLocaleTimeString('es-ES', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        hour12: false
-                                                      })}
-                                                    </small>
-                                                  </div>
+                                                  {/* ELIMINADO: Div de hora-pago */}
                                                 </div>
                                               </td>
                                               <td>{formatearMoneda(pago.capitalPagado)}</td>
@@ -2748,9 +3125,9 @@ const cerrarModalAbonoIntereses = () => {
                   <h2>Detalles de Préstamos</h2>
                   <div className="contador-prestamos">
                     {prestamosFiltrados.length} de {clientes.length} préstamos
-                    {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
+                    {isSearchActive && clientesFiltradosPorDia.length > 0 && (
                       <span className="contador-filtro">
-                        ({prestamosFiltradosPorFecha.length} con préstamo en {formatearFecha(fechaBusqueda)})
+                        ({clientesFiltradosPorDia.length} con pago el día {searchInput})
                       </span>
                     )}
                   </div>
@@ -2805,7 +3182,7 @@ const cerrarModalAbonoIntereses = () => {
                 </div>
               </div>
 
-              {fechaBusqueda && prestamosFiltradosPorFecha.length > 0 && (
+              {isSearchActive && clientesFiltradosPorDia.length > 0 && (
                 <div className="info-filtro-fecha">
                   <div className="icono-info-filtro">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2813,9 +3190,9 @@ const cerrarModalAbonoIntereses = () => {
                     </svg>
                   </div>
                   <p>
-                    <strong>Filtro activo:</strong> Mostrando todos los clientes.
+                    <strong>Filtro activo por día de pago:</strong> Mostrando clientes con pago el día {searchInput}
                     <span className="clientes-destacados">
-                      {prestamosFiltradosPorFecha.length} cliente(s) tienen préstamos registrados el {formatearFecha(fechaBusqueda)}
+                      ({clientesFiltradosPorDia.length} cliente(s) encontrado(s))
                     </span>
                   </p>
                 </div>
@@ -2850,14 +3227,14 @@ const cerrarModalAbonoIntereses = () => {
                   {prestamosFiltrados.map(cliente => {
                     const progreso = (cliente.cuotasPagadas / cliente.numeroCuotas) * 100;
                     const pagosCliente = pagos[cliente.id] || [];
-                    const tienePrestamoEnFecha = clienteTienePrestamoEnFecha(cliente.id);
-                    const detallePrestamo = obtenerDetallePrestamoEncontrado(cliente.id);
+                    const tienePrestamoEnFecha = clientesFiltradosPorDia.some(c => c.id === cliente.id);
                     const historialAbierto = historialesAbiertos[cliente.id] || false;
                     const historialCargando = historialesCargando[cliente.id] || false;
 
                     return (
                       <div
                         key={cliente.id}
+                        id={`cliente-${cliente.id}`}
                         className={`prestamoDetalleCard ${tienePrestamoEnFecha ? 'destacado-filtro' : ''}`}
                       >
                         {tienePrestamoEnFecha && (
@@ -2865,7 +3242,7 @@ const cerrarModalAbonoIntereses = () => {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Préstamo registrado el {formatearFecha(fechaBusqueda)}
+                            Pago el día {searchInput}
                           </div>
                         )}
 
@@ -2891,6 +3268,12 @@ const cerrarModalAbonoIntereses = () => {
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                                     </svg>
                                     {cliente.telefono}
+                                  </span>
+                                  <span className="dia-pago">
+                                    <svg className="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Día: {obtenerDiaPagoCliente(cliente)}
                                   </span>
                                 </div>
                               </div>
@@ -2939,17 +3322,6 @@ const cerrarModalAbonoIntereses = () => {
                             <label>Dirección:</label>
                             <span>{cliente.direccion || 'No registrada'}</span>
                           </div>
-                          {tienePrestamoEnFecha && detallePrestamo && (
-                            <div className="infoItem full-width destacado">
-                              <label>Préstamo encontrado:</label>
-                              <span className="detalle-prestamo-filtro">
-                                <strong>{formatearMoneda(detallePrestamo.monto)}</strong> -
-                                {detallePrestamo.tasaInteres}% interés -
-                                {detallePrestamo.cuotas} cuotas -
-                                Cuota: {formatearMoneda(detallePrestamo.cuotaMensual)}
-                              </span>
-                            </div>
-                          )}
                           {cliente.observaciones && (
                             <div className="infoItem full-width">
                               <label>Observaciones:</label>
@@ -2982,530 +3354,269 @@ const cerrarModalAbonoIntereses = () => {
                                   <div className="valor">{formatearMoneda(cliente.cuotaMensual)}</div>
                                 </div>
                             </div>
-                            </div>
+                          </div>
 
-                            <div className="columnaDesglose">
-                              <h5>TOTAL DEL PRÉSTAMO</h5>
-                              <div className="listaDesglose">
-                                <div className="itemDesglose">
-                                  <div className="etiqueta">Monto Prestado</div>
-                                  <div className="valor">{formatearMoneda(cliente.montoPrestamo)}</div>
-                                </div>
-                                <div className="itemDesglose">
-                                  <div className="etiqueta">Total Intereses</div>
-                                  <div className="valor">{formatearMoneda(cliente.totalIntereses)}</div>
-                                </div>
-                                <div className="itemDesglose">
-                                  <div className="etiqueta">Total 4x1000</div>
-                                  <div className="valor">{formatearMoneda(cliente.total4x1000)}</div>
-                                </div>
-                                <div className="itemDesglose">
-                                  <div className="etiqueta">Intereses Acumulados</div>
-                                  <div className="valor">{formatearMoneda(cliente.interesesAcumulados)}</div>
-                                </div>
-                                <div className="itemDesglose total">
-                                  <div className="etiqueta">TOTAL A PAGAR</div>
-                                  <div className="valor">{formatearMoneda(cliente.montoPrestamo + cliente.totalIntereses + cliente.total4x1000)}</div>
-                                </div>
+                          <div className="columnaDesglose">
+                            <h5>TOTAL DEL PRÉSTAMO</h5>
+                            <div className="listaDesglose">
+                              <div className="itemDesglose">
+                                <div className="etiqueta">Monto Prestado</div>
+                                <div className="valor">{formatearMoneda(cliente.montoPrestamo)}</div>
+                              </div>
+                              <div className="itemDesglose">
+                                <div className="etiqueta">Total Intereses</div>
+                                <div className="valor">{formatearMoneda(cliente.totalIntereses)}</div>
+                              </div>
+                              <div className="itemDesglose">
+                                <div className="etiqueta">Total 4x1000</div>
+                                <div className="valor">{formatearMoneda(cliente.total4x1000)}</div>
+                              </div>
+                              <div className="itemDesglose">
+                                <div className="etiqueta">Intereses Acumulados</div>
+                                <div className="valor">{formatearMoneda(cliente.interesesAcumulados)}</div>
+                              </div>
+                              <div className="itemDesglose total">
+                                <div className="etiqueta">TOTAL A PAGAR</div>
+                                <div className="valor">{formatearMoneda(cliente.montoPrestamo + cliente.totalIntereses + cliente.total4x1000)}</div>
                               </div>
                             </div>
                           </div>
-
-                          <div className="resumenEstado">
-                            <div className="itemResumen">
-                              <p className="etiqueta">CUOTAS</p>
-                              <p className="valor">{cliente.cuotasPagadas} / {cliente.numeroCuotas}</p>
-                            </div>
-                            <div className="itemResumen">
-                              <p className="etiqueta">SALDO PENDIENTE</p>
-                              <p className="valor">{formatearMoneda(cliente.saldoPendiente)}</p>
-                            </div>
-                            <div className="itemResumen">
-                              <p className="etiqueta">PROGRESO</p>
-                              <p className="valor progreso">{progreso.toFixed(0)}%</p>
-                            </div>
-                          </div>
                         </div>
+                      </div>
 
-                        <div className="progresoCuotas">
-                          <div className="progresoInfo">
-                            <span>Progreso de pagos</span>
-                            <span>{cliente.cuotasPagadas} de {cliente.numeroCuotas} cuotas</span>
-                          </div>
-                          <div className="progresoBarra">
-                            <div
-                              className="progresoCompletado"
-                              style={{ width: `${progreso}%` }}
-                            ></div>
-                          </div>
-                          <div className="progresoMarcadores">
-                            <span>0%</span>
-                            <span>25%</span>
-                            <span>50%</span>
-                            <span>75%</span>
-                            <span>100%</span>
-                          </div>
+                      <div className="progresoCuotas">
+                        <div className="progresoInfo">
+                          <span>Progreso de pagos</span>
+                          <span>{cliente.cuotasPagadas} de {cliente.numeroCuotas} cuotas</span>
                         </div>
+                        <div className="progresoBarra">
+                          <div
+                            className="progresoCompletado"
+                            style={{ width: `${progreso}%` }}
+                          ></div>
+                        </div>
+                        <div className="progresoMarcadores">
+                          <span>0%</span>
+                          <span>25%</span>
+                          <span>50%</span>
+                          <span>75%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
 
-                        {/* HISTORIAL DE PAGOS - CON BOTÓN DESPLEGABLE */}
-                        <div className="seccionHistorial">
-                          <div className="historialHeader">
-                            <button
-                              onClick={() => toggleHistorialCliente(cliente.id)}
-                              className="toggleHistorial"
-                              disabled={historialCargando}
+                      {/* HISTORIAL DE PAGOS - MODIFICADO: Solo fecha sin hora */}
+                      <div className="seccionHistorial">
+                        <div className="historialHeader">
+                          <button
+                            onClick={() => toggleHistorialCliente(cliente.id)}
+                            className="toggleHistorial"
+                            disabled={historialCargando}
+                          >
+                            <svg
+                              className={`icon-arrow ${historialAbierto ? 'rotate' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className={`icon-arrow ${historialAbierto ? 'rotate' : ''}`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                              </svg>
-                              <span>
-                                {historialCargando ? 'Cargando...' :
-                                  historialAbierto ? 'Ocultar Historial de Pagos' :
-                                    pagosCliente.length > 0 ? `Ver Historial (${pagosCliente.length} pagos)` : 'Ver Historial de Pagos'}
-                              </span>
-                            </button>
-                          </div>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                            <span>
+                              {historialCargando ? 'Cargando...' :
+                                historialAbierto ? 'Ocultar Historial de Pagos' :
+                                  pagosCliente.length > 0 ? `Ver Historial (${pagosCliente.length} pagos)` : 'Ver Historial de Pagos'}
+                            </span>
+                          </button>
+                        </div>
 
-                          {/* CONTENIDO DEL HISTORIAL (solo se muestra si está abierto) */}
-                          {historialAbierto && (
-                            <div className="historialContenido">
-                              {pagosCliente.length > 0 ? (
-                                <div className="tablaHistorialCompleta">
-                                  <table>
-                                    <thead>
-                                      <tr>
-                                        <th>Cuota</th>
-                                        <th>Fecha Real</th>
-                                        <th>Capital</th>
-                                        <th>Interés</th>
-                                        <th>Total</th>
-                                        <th>Tipo</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {pagosCliente
-                                        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime())
-                                        .map((pago) => (
-                                          <tr key={pago.id}>
-                                            <td><strong>#{pago.cuotaNumero}</strong></td>
-                                            <td>
-                                              <div className="fecha-pago-detalle">
-                                                <div className="fecha-principal">
-                                                  {formatearFecha(pago.fechaPago)}
-                                                </div>
-                                                <div className="hora-pago">
-                                                  <small>
-                                                    {new Date(pago.fechaPago).toLocaleTimeString('es-ES', {
-                                                      hour: '2-digit',
-                                                      minute: '2-digit',
-                                                      hour12: false
-                                                    })}
-                                                  </small>
-                                                </div>
+                        {/* CONTENIDO DEL HISTORIAL */}
+                        {historialAbierto && (
+                          <div className="historialContenido">
+                            {pagosCliente.length > 0 ? (
+                              <div className="tablaHistorialCompleta">
+                                <table>
+                                  <thead>
+                                    <tr>
+                                      <th>Cuota</th>
+                                      <th>Fecha</th> {/* MODIFICADO */}
+                                      <th>Capital</th>
+                                      <th>Interés</th>
+                                      <th>Total</th>
+                                      <th>Tipo</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {pagosCliente
+                                      .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime())
+                                      .map((pago) => (
+                                        <tr key={pago.id}>
+                                          <td><strong>#{pago.cuotaNumero}</strong></td>
+                                          <td>
+                                            <div className="fecha-pago-detalle">
+                                              <div className="fecha-principal">
+                                                {/* MODIFICADO: Solo fecha */}
+                                                {formatearFecha(pago.fechaPago)}
                                               </div>
-                                            </td>
-                                            <td>{formatearMoneda(pago.capitalPagado)}</td>
-                                            <td>{formatearMoneda(pago.interesPagado)}</td>
-                                            <td>
-                                              <strong className="text-success">
-                                                {formatearMoneda(pago.montoPagado)}
-                                              </strong>
-                                            </td>
-                                            <td>
-                                              <span className="badgeEstado">
-                                                {SistemaPrestamosService.determinarTipoPago(pago.observaciones || '')}
-                                              </span>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr>
-                                        <td colSpan={3} className="text-right">
-                                          <strong>Total pagado:</strong>
-                                        </td>
-                                        <td colSpan={2}>
-                                          <strong className="text-success">
-                                            {formatearMoneda(pagosCliente.reduce((sum, pago) => sum + pago.montoPagado, 0))}
-                                          </strong>
-                                        </td>
-                                        <td>
-                                          <span className="badgeResumen">
-                                            {pagosCliente.length} {pagosCliente.length === 1 ? 'pago' : 'pagos'}
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
+                                            </div>
+                                          </td>
+                                          <td>{formatearMoneda(pago.capitalPagado)}</td>
+                                          <td>{formatearMoneda(pago.interesPagado)}</td>
+                                          <td>
+                                            <strong className="text-success">
+                                              {formatearMoneda(pago.montoPagado)}
+                                            </strong>
+                                          </td>
+                                          <td>
+                                            <span className="badgeEstado">
+                                              {SistemaPrestamosService.determinarTipoPago(pago.observaciones || '')}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                  </tbody>
+                                  <tfoot>
+                                    <tr>
+                                      <td colSpan={3} className="text-right">
+                                        <strong>Total pagado:</strong>
+                                      </td>
+                                      <td colSpan={2}>
+                                        <strong className="text-success">
+                                          {formatearMoneda(pagosCliente.reduce((sum, pago) => sum + pago.montoPagado, 0))}
+                                        </strong>
+                                      </td>
+                                      <td>
+                                        <span className="badgeResumen">
+                                          {pagosCliente.length} {pagosCliente.length === 1 ? 'pago' : 'pagos'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  </tfoot>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="sinHistorial">
+                                <div className="iconoHistorial">
+                                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                  </svg>
                                 </div>
-                              ) : (
-                                <div className="sinHistorial">
-                                  <div className="iconoHistorial">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                  </div>
-                                  <p>No hay pagos registrados</p>
-                                  <button
-                                    onClick={() => cargarHistorialCliente(cliente.id)}
-                                    className="btn-pago-detalle"
-                                  >
-                                    Cargar historial
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="noResults">
-                  <div className="noResultsIcon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <h3>No se encontraron resultados</h3>
-                  <p>No hay préstamos registrados</p>
-                  <button
-                    className="clearSearchButton"
-                    onClick={() => setSearchTermPrestamos('')}
-                  >
-                    Limpiar búsqueda
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Modal Nuevo Cliente */}
-      {isModalOpen && (
-        <div className="modalOverlay">
-          <div className="modalContent">
-            <div className="modalHeader">
-              <h2>Nuevo Cliente y Préstamo</h2>
-              <button
-                className="closeButton"
-                onClick={cerrarModalCliente}
-                disabled={loading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modalBody">
-              <form onSubmit={crearCliente} className="clienteForm">
-                <div className="seccionFormulario">
-                  <h3>Datos Personales</h3>
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <input
-                        type="text"
-                        name="nombre"
-                        value={formData.nombre}
-                        onChange={manejarCambioInput}
-                        placeholder="Nombre"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="text"
-                        name="apellido"
-                        value={formData.apellido}
-                        onChange={manejarCambioInput}
-                        placeholder="Apellido"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="text"
-                        name="cedula"
-                        value={formData.cedula}
-                        onChange={manejarCambioInput}
-                        placeholder="Cédula"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="tel"
-                        name="telefono"
-                        value={formData.telefono}
-                        onChange={manejarCambioInput}
-                        placeholder="Teléfono"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={manejarCambioInput}
-                        placeholder="Email (opcional)"
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="text"
-                        name="direccion"
-                        value={formData.direccion}
-                        onChange={manejarCambioInput}
-                        placeholder="Dirección (opcional)"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="formGroup">
-                    <label>Observaciones</label>
-                    <textarea
-                      name="observaciones"
-                      value={formData.observaciones}
-                      onChange={manejarCambioInput}
-                      placeholder="Observaciones adicionales..."
-                      rows={2}
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div className="seccionFormulario">
-                  <h3>Datos del Préstamo</h3>
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <input
-                        type="number"
-                        name="montoPrestamo"
-                        value={formData.montoPrestamo}
-                        onChange={manejarCambioInput}
-                        placeholder="Monto del Préstamo"
-                        min="1"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="number"
-                        name="tasaInteres"
-                        value={formData.tasaInteres}
-                        onChange={manejarCambioInput}
-                        placeholder="Tasa de Interés %"
-                        step="0.1"
-                        min="0"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <input
-                        type="number"
-                        name="numeroCuotas"
-                        value={formData.numeroCuotas}
-                        onChange={manejarCambioInput}
-                        placeholder="Número de Cuotas"
-                        min="1"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Fecha del Préstamo</label>
-                      <input
-                        type="date"
-                        name="fechaPrestamo"
-                        value={formData.fechaPrestamo}
-                        onChange={manejarCambioInput}
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Próxima fecha de pago</label>
-                      <input
-                        type="date"
-                        name="fechaProximoPago"
-                        value={formData.fechaProximoPago}
-                        onChange={manejarCambioInput}
-                        placeholder="Próximo pago"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  {calculoPreview && (
-                    <div className="previewCalculo">
-                      <h4>Cálculo del Préstamo</h4>
-
-                      <div className="gridCalculo">
-                        <div className="columnaCalculo">
-                          <h5>PAGOS MENSUALES</h5>
-                          <div className="listaCalculo">
-                            <div className="itemCalculo">
-                              <span>Capital</span>
-                              <span>{formatearMoneda(calculoPreview.capitalMensual)}</span>
-                            </div>
-                            <div className="itemCalculo">
-                              <span>Interés</span>
-                              <span>{formatearMoneda(calculoPreview.interesMensual)}</span>
-                            </div>
-                            <div className="itemCalculo">
-                              <span>4x1000</span>
-                              <span>{formatearMoneda(calculoPreview.valor4x1000Mensual)}</span>
-                            </div>
-                            <div className="itemCalculo total">
-                              <span>CUOTA TOTAL</span>
-                              <span>{formatearMoneda(calculoPreview.cuotaMensual)}</span>
-                            </div>
+                                <p>No hay pagos registrados</p>
+                                <button
+                                  onClick={() => cargarHistorialCliente(cliente.id)}
+                                  className="btn-pago-detalle"
+                                >
+                                  Cargar historial
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        </div>
-
-                        <div className="columnaCalculo">
-                          <h5>TOTAL DEL PRÉSTAMO</h5>
-                          <div className="listaCalculo">
-                            <div className="itemCalculo">
-                              <span>Monto Prestado</span>
-                              <span>{formatearMoneda(parseFloat(formData.montoPrestamo))}</span>
-                            </div>
-                            <div className="itemCalculo">
-                              <span>Total Intereses</span>
-                              <span>{formatearMoneda(calculoPreview.totalIntereses)}</span>
-                            </div>
-                            <div className="itemCalculo">
-                              <span>Total 4x1000</span>
-                              <span>{formatearMoneda(calculoPreview.total4x1000)}</span>
-                            </div>
-                            <div className="itemCalculo total">
-                              <span>TOTAL A PAGAR</span>
-                              <span>{formatearMoneda(calculoPreview.totalPagar)}</span>
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="noResults">
+                <div className="noResultsIcon">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
                 </div>
-
+                <h3>No se encontraron resultados</h3>
+                <p>No hay préstamos registrados</p>
                 <button
-                  type="submit"
-                  className="saveButton"
-                  disabled={loading}
+                  className="clearSearchButton"
+                  onClick={() => setSearchTermPrestamos('')}
                 >
-                  {loading ? (
-                    <>
-                      <div className="spinner"></div>
-                      <span>REGISTRANDO CLIENTE...</span>
-                    </>
-                  ) : (
-                    'REGISTRAR CLIENTE Y PRÉSTAMO'
-                  )}
+                  Limpiar búsqueda
                 </button>
-              </form>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
+    </main>
 
-      {/* Modal Registrar Pago */}
-      {isModalPagoOpen && clienteSeleccionado && (
-        <div className="modalOverlay">
-          <div className="modalContent">
-            <div className="modalHeader">
-              <h2>
-                Registrar Pago - {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}
-              </h2>
-              <p>Cuota {clienteSeleccionado.cuotasPagadas + 1} de {clienteSeleccionado.numeroCuotas}</p>
-              <button
-                className="closeButton"
-                onClick={cerrarModalPago}
-                disabled={loading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modalBody">
-              <div className="infoCliente">
-                <div className="infoRow">
-                  <span>Monto Prestado:</span>
-                  <strong>{formatearMoneda(clienteSeleccionado.montoPrestamo)}</strong>
-                </div>
-                <div className="infoRow">
-                  <span>Saldo Pendiente:</span>
-                  <strong>{formatearMoneda(clienteSeleccionado.saldoPendiente)}</strong>
-                </div>
-                <div className="infoRow">
-                  <span>Cuotas Pagadas:</span>
-                  <strong>{clienteSeleccionado.cuotasPagadas} / {clienteSeleccionado.numeroCuotas}</strong>
-                </div>
-                <div className="infoRow">
-                  <span>Cuota Mensual:</span>
-                  <strong>{formatearMoneda(clienteSeleccionado.cuotaMensual)}</strong>
-                </div>
-                <div className="infoRow">
-                  <span>Intereses Acumulados:</span>
-                  <strong>{formatearMoneda(clienteSeleccionado.interesesAcumulados)}</strong>
-                </div>
-              </div>
-
-              <form onSubmit={registrarPago} className="pagoForm">
+    {/* Modal Nuevo Cliente */}
+    {isModalOpen && (
+      <div className="modalOverlay">
+        <div className="modalContent">
+          <div className="modalHeader">
+            <h2>Nuevo Cliente y Préstamo</h2>
+            <button
+              className="closeButton"
+              onClick={cerrarModalCliente}
+              disabled={loading}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modalBody">
+            <form onSubmit={crearCliente} className="clienteForm">
+              <div className="seccionFormulario">
+                <h3>Datos Personales</h3>
                 <div className="formRow">
                   <div className="formGroup">
-                    <label>Número de Cuota</label>
                     <input
-                      type="number"
-                      name="cuotaNumero"
-                      value={formPago.cuotaNumero}
-                      onChange={(e) => setFormPago(prev => ({ ...prev, cuotaNumero: e.target.value }))}
-                      min="1"
-                      max={clienteSeleccionado.numeroCuotas}
+                      type="text"
+                      name="nombre"
+                      value={formData.nombre}
+                      onChange={manejarCambioInput}
+                      placeholder="Nombre"
                       required
                       disabled={loading}
                     />
                   </div>
                   <div className="formGroup">
-                    <label>Monto a Pagar</label>
                     <input
-                      type="number"
-                      name="montoPagado"
-                      value={formPago.montoPagado}
-                      onChange={(e) => setFormPago(prev => ({ ...prev, montoPagado: e.target.value }))}
-                      min="1"
+                      type="text"
+                      name="apellido"
+                      value={formData.apellido}
+                      onChange={manejarCambioInput}
+                      placeholder="Apellido"
                       required
                       disabled={loading}
                     />
                   </div>
-                </div>
-
-                <div className="formRow">
                   <div className="formGroup">
-                    <label>Fecha del Pago</label>
                     <input
-                      type="date"
-                      name="fechaPago"
-                      value={formPago.fechaPago}
-                      onChange={(e) => setFormPago(prev => ({ ...prev, fechaPago: e.target.value }))}
+                      type="text"
+                      name="cedula"
+                      value={formData.cedula}
+                      onChange={manejarCambioInput}
+                      placeholder="Cédula"
                       required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={manejarCambioInput}
+                      placeholder="Teléfono"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={manejarCambioInput}
+                      placeholder="Email (opcional)"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <input
+                      type="text"
+                      name="direccion"
+                      value={formData.direccion}
+                      onChange={manejarCambioInput}
+                      placeholder="Dirección (opcional)"
                       disabled={loading}
                     />
                   </div>
@@ -3514,732 +3625,969 @@ const cerrarModalAbonoIntereses = () => {
                 <div className="formGroup">
                   <label>Observaciones</label>
                   <textarea
-                    value={formPago.observaciones}
-                    onChange={(e) => setFormPago(prev => ({ ...prev, observaciones: e.target.value }))}
-                    placeholder="Descripción del pago..."
+                    name="observaciones"
+                    value={formData.observaciones}
+                    onChange={manejarCambioInput}
+                    placeholder="Observaciones adicionales..."
                     rows={2}
                     disabled={loading}
                   />
                 </div>
-
-                <button
-                  type="submit"
-                  className="saveButton"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="spinner"></div>
-                      <span>REGISTRANDO PAGO...</span>
-                    </>
-                  ) : (
-                    `REGISTRAR PAGO DE ${formatearMoneda(parseFloat(formPago.montoPagado) || 0)}`
-                  )}
-                </button>
-              </form>
-
-              <div className="historialPagos">
-                <h3>Historial de Pagos</h3>
-                <div className="listaPagos">
-                  {pagos[clienteSeleccionado.id]?.length > 0 ? (
-                    <div className="tablaPagosModal">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Cuota</th>
-                            <th>Fecha Real</th>
-                            <th>Capital</th>
-                            <th>Interés</th>
-                            <th>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pagos[clienteSeleccionado.id]
-                            .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime())
-                            .slice(0, 5)
-                            .map((pago) => (
-                              <tr key={pago.id}>
-                                <td><strong>#{pago.cuotaNumero}</strong></td>
-                                <td>{formatearFechaHora(pago.fechaPago)}</td>
-                                <td>{formatearMoneda(pago.capitalPagado)}</td>
-                                <td>{formatearMoneda(pago.interesPagado)}</td>
-                                <td><strong className="text-success">{formatearMoneda(pago.montoPagado)}</strong></td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="sinPagosModal">
-                      <div className="icono">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                      </div>
-                      <p>No hay pagos registrados</p>
-                    </div>
-                  )}
-                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Modal de búsqueda por fecha */}
-      {isModalBusquedaFechaOpen && (
-        <div className="modalOverlay">
-          <div className="modalContent modal-busqueda-fecha">
-            <div className="modalHeader">
-              <h2>Buscar préstamos por fecha de registro</h2>
+              <div className="seccionFormulario">
+                <h3>Datos del Préstamo</h3>
+                <div className="formRow">
+                  <div className="formGroup">
+                    <input
+                      type="number"
+                      name="montoPrestamo"
+                      value={formData.montoPrestamo}
+                      onChange={manejarCambioInput}
+                      placeholder="Monto del Préstamo"
+                      min="1"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <input
+                      type="number"
+                      name="tasaInteres"
+                      value={formData.tasaInteres}
+                      onChange={manejarCambioInput}
+                      placeholder="Tasa de Interés %"
+                      step="0.1"
+                      min="0"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <input
+                      type="number"
+                      name="numeroCuotas"
+                      value={formData.numeroCuotas}
+                      onChange={manejarCambioInput}
+                      placeholder="Número de Cuotas"
+                      min="1"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Fecha del Préstamo</label>
+                    <input
+                      type="date"
+                      name="fechaPrestamo"
+                      value={formData.fechaPrestamo}
+                      onChange={manejarCambioInput}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Próxima fecha de pago</label>
+                    <input
+                      type="date"
+                      name="fechaProximoPago"
+                      value={formData.fechaProximoPago}
+                      onChange={manejarCambioInput}
+                      placeholder="Próximo pago"
+                      required
+                      disabled={loading}
+                    />
+                    <div className="info-dia-pago">
+                      <small>
+                        <strong>Día de pago calculado:</strong> {formData.diaPago}
+                      </small>
+                      <small>
+                        Este será el día del mes en que el cliente deberá pagar cada mes
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                {calculoPreview && (
+                  <div className="previewCalculo">
+                    <h4>Cálculo del Préstamo</h4>
+
+                    <div className="gridCalculo">
+                      <div className="columnaCalculo">
+                        <h5>PAGOS MENSUALES</h5>
+                        <div className="listaCalculo">
+                          <div className="itemCalculo">
+                            <span>Capital</span>
+                            <span>{formatearMoneda(calculoPreview.capitalMensual)}</span>
+                          </div>
+                          <div className="itemCalculo">
+                            <span>Interés</span>
+                            <span>{formatearMoneda(calculoPreview.interesMensual)}</span>
+                          </div>
+                          <div className="itemCalculo">
+                            <span>4x1000</span>
+                            <span>{formatearMoneda(calculoPreview.valor4x1000Mensual)}</span>
+                          </div>
+                          <div className="itemCalculo total">
+                            <span>CUOTA TOTAL</span>
+                            <span>{formatearMoneda(calculoPreview.cuotaMensual)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="columnaCalculo">
+                        <h5>TOTAL DEL PRÉSTAMO</h5>
+                        <div className="listaCalculo">
+                          <div className="itemCalculo">
+                            <span>Monto Prestado</span>
+                            <span>{formatearMoneda(parseFloat(formData.montoPrestamo))}</span>
+                          </div>
+                          <div className="itemCalculo">
+                            <span>Total Intereses</span>
+                            <span>{formatearMoneda(calculoPreview.totalIntereses)}</span>
+                          </div>
+                          <div className="itemCalculo">
+                            <span>Total 4x1000</span>
+                            <span>{formatearMoneda(calculoPreview.total4x1000)}</span>
+                          </div>
+                          <div className="itemCalculo total">
+                            <span>TOTAL A PAGAR</span>
+                            <span>{formatearMoneda(calculoPreview.totalPagar)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
-                className="closeButton"
-                onClick={() => setIsModalBusquedaFechaOpen(false)}
+                type="submit"
+                className="saveButton"
                 disabled={loading}
               >
-                ×
+                {loading ? (
+                  <>
+                    <div className="spinner"></div>
+                    <span>REGISTRANDO CLIENTE...</span>
+                  </>
+                ) : (
+                  'REGISTRAR CLIENTE Y PRÉSTAMO'
+                )}
               </button>
-            </div>
-            <div className="modalBody">
-              <div className="busqueda-fecha-form">
-                <div className="info-busqueda">
-                  <div className="icono-info">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <p>Busca todos los préstamos que fueron registrados en una fecha específica.</p>
-                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
 
+    {/* Modal Registrar Pago */}
+    {isModalPagoOpen && clienteSeleccionado && (
+      <div className="modalOverlay">
+        <div className="modalContent">
+          <div className="modalHeader">
+            <h2>
+              Registrar Pago - {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}
+            </h2>
+            <p>Cuota {clienteSeleccionado.cuotasPagadas + 1} de {clienteSeleccionado.numeroCuotas}</p>
+            <button
+              className="closeButton"
+              onClick={cerrarModalPago}
+              disabled={loading}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modalBody">
+            <div className="infoCliente">
+              <div className="infoRow">
+                <span>Monto Prestado:</span>
+                <strong>{formatearMoneda(clienteSeleccionado.montoPrestamo)}</strong>
+              </div>
+              <div className="infoRow">
+                <span>Saldo Pendiente:</span>
+                <strong>{formatearMoneda(clienteSeleccionado.saldoPendiente)}</strong>
+              </div>
+              <div className="infoRow">
+                <span>Cuotas Pagadas:</span>
+                <strong>{clienteSeleccionado.cuotasPagadas} / {clienteSeleccionado.numeroCuotas}</strong>
+              </div>
+              <div className="infoRow">
+                <span>Cuota Mensual:</span>
+                <strong>{formatearMoneda(clienteSeleccionado.cuotaMensual)}</strong>
+              </div>
+              <div className="infoRow">
+                <span>Intereses Acumulados:</span>
+                <strong>{formatearMoneda(clienteSeleccionado.interesesAcumulados)}</strong>
+              </div>
+              <div className="infoRow">
+                <span>Día de Pago:</span>
+                <strong>{obtenerDiaPagoCliente(clienteSeleccionado)}</strong>
+              </div>
+            </div>
+
+            <form onSubmit={registrarPago} className="pagoForm">
+              <div className="formRow">
                 <div className="formGroup">
-                  <label>Fecha de registro del préstamo:</label>
+                  <label>Número de Cuota</label>
                   <input
-                    type="date"
-                    value={fechaBusqueda}
-                    onChange={(e) => setFechaBusqueda(e.target.value)}
-                    className="input-fecha-busqueda"
-                    max={new Date().toISOString().split('T')[0]}
+                    type="number"
+                    name="cuotaNumero"
+                    value={formPago.cuotaNumero}
+                    onChange={(e) => setFormPago(prev => ({ ...prev, cuotaNumero: e.target.value }))}
+                    min="1"
+                    max={clienteSeleccionado.numeroCuotas}
+                    required
+                    disabled={loading}
                   />
                 </div>
-
-                <div className="acciones-busqueda">
-                  <button
-                    onClick={() => setIsModalBusquedaFechaOpen(false)}
-                    className="cancel-btn"
+                <div className="formGroup">
+                  <label>Monto a Pagar</label>
+                  <input
+                    type="number"
+                    name="montoPagado"
+                    value={formPago.montoPagado}
+                    onChange={(e) => setFormPago(prev => ({ ...prev, montoPagado: e.target.value }))}
+                    min="1"
+                    required
                     disabled={loading}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={buscarPorFechaRegistro}
-                    disabled={!fechaBusqueda || loading}
-                    className="search-btn"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="spinner mini"></div>
-                        <span>Buscando...</span>
-                      </>
-                    ) : (
-                      'Buscar préstamos'
-                    )}
-                  </button>
+                  />
                 </div>
+              </div>
 
-                {fechaBusqueda && (
-                  <div className="preview-busqueda">
-                    <p>
-                      <strong>Vas a buscar:</strong> Préstamos registrados el {formatearFecha(fechaBusqueda)}
-                    </p>
+              <div className="formRow">
+                <div className="formGroup">
+                  <label>Fecha del Pago</label>
+                  <input
+                    type="date"
+                    name="fechaPago"
+                    value={formPago.fechaPago}
+                    onChange={(e) => setFormPago(prev => ({ ...prev, fechaPago: e.target.value }))}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="formGroup">
+                <label>Observaciones</label>
+                <textarea
+                  value={formPago.observaciones}
+                  onChange={(e) => setFormPago(prev => ({ ...prev, observaciones: e.target.value }))}
+                  placeholder="Descripción del pago..."
+                  rows={2}
+                  disabled={loading}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="saveButton"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="spinner"></div>
+                    <span>REGISTRANDO PAGO...</span>
+                  </>
+                ) : (
+                  `REGISTRAR PAGO DE ${formatearMoneda(parseFloat(formPago.montoPagado) || 0)}`
+                )}
+              </button>
+            </form>
+
+            <div className="historialPagos">
+              <h3>Historial de Pagos</h3>
+              <div className="listaPagos">
+                {pagos[clienteSeleccionado.id]?.length > 0 ? (
+                  <div className="tablaPagosModal">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Cuota</th>
+                          <th>Fecha</th> {/* MODIFICADO */}
+                          <th>Capital</th>
+                          <th>Interés</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagos[clienteSeleccionado.id]
+                          .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime())
+                          .slice(0, 5)
+                          .map((pago) => (
+                            <tr key={pago.id}>
+                              <td><strong>#{pago.cuotaNumero}</strong></td>
+                              <td>{formatearFecha(pago.fechaPago)}</td> {/* MODIFICADO */}
+                              <td>{formatearMoneda(pago.capitalPagado)}</td>
+                              <td>{formatearMoneda(pago.interesPagado)}</td>
+                              <td><strong className="text-success">{formatearMoneda(pago.montoPagado)}</strong></td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="sinPagosModal">
+                    <div className="icono">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                    </div>
+                    <p>No hay pagos registrados</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Modal Editar Cliente - ACTUALIZADO CORRECTAMENTE */}
-      {isModalEditarOpen && clienteSeleccionado && (
-        <div className="modalOverlay">
-          <div className="modalContent">
-            <div className="modalHeader">
-              <h2>Editar Cliente: {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h2>
-              <button
-                className="closeButton"
-                onClick={cerrarModalEditar}
-                disabled={loading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modalBody">
-              <form onSubmit={editarCliente} className="clienteForm">
-                <div className="seccionFormulario">
-                  <h3>Datos Personales</h3>
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Nombre</label>
-                      <input
-                        type="text"
-                        name="nombre"
-                        value={formEditar.nombre}
-                        onChange={(e) => setFormEditar({ ...formEditar, nombre: e.target.value })}
-                        placeholder="Nombre"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Apellido</label>
-                      <input
-                        type="text"
-                        name="apellido"
-                        value={formEditar.apellido}
-                        onChange={(e) => setFormEditar({ ...formEditar, apellido: e.target.value })}
-                        placeholder="Apellido"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Cédula</label>
-                      <input
-                        type="text"
-                        name="cedula"
-                        value={formEditar.cedula}
-                        onChange={(e) => setFormEditar({ ...formEditar, cedula: e.target.value })}
-                        placeholder="Cédula"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
+    {/* Modal Editar Cliente */}
+    {isModalEditarOpen && clienteSeleccionado && (
+      <div className="modalOverlay">
+        <div className="modalContent">
+          <div className="modalHeader">
+            <h2>Editar Cliente: {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h2>
+            <button
+              className="closeButton"
+              onClick={cerrarModalEditar}
+              disabled={loading}
+            >
+              ×
+            </button>
+          </div>
+          <div className="modalBody">
+            <form onSubmit={editarCliente} className="clienteForm">
+              <div className="seccionFormulario">
+                <h3>Datos Personales</h3>
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Nombre</label>
+                    <input
+                      type="text"
+                      name="nombre"
+                      value={formEditar.nombre}
+                      onChange={(e) => setFormEditar({ ...formEditar, nombre: e.target.value })}
+                      placeholder="Nombre"
+                      required
+                      disabled={loading}
+                    />
                   </div>
+                  <div className="formGroup">
+                    <label>Apellido</label>
+                    <input
+                      type="text"
+                      name="apellido"
+                      value={formEditar.apellido}
+                      onChange={(e) => setFormEditar({ ...formEditar, apellido: e.target.value })}
+                      placeholder="Apellido"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Cédula</label>
+                    <input
+                      type="text"
+                      name="cedula"
+                      value={formEditar.cedula}
+                      onChange={(e) => setFormEditar({ ...formEditar, cedula: e.target.value })}
+                      placeholder="Cédula"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Teléfono</label>
-                      <input
-                        type="tel"
-                        name="telefono"
-                        value={formEditar.telefono}
-                        onChange={(e) => setFormEditar({ ...formEditar, telefono: e.target.value })}
-                        placeholder="Teléfono"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Email</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formEditar.email}
-                        onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
-                        placeholder="Email"
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Dirección</label>
-                      <input
-                        type="text"
-                        name="direccion"
-                        value={formEditar.direccion}
-                        onChange={(e) => setFormEditar({ ...formEditar, direccion: e.target.value })}
-                        placeholder="Dirección"
-                        disabled={loading}
-                      />
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Teléfono</label>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      value={formEditar.telefono}
+                      onChange={(e) => setFormEditar({ ...formEditar, telefono: e.target.value })}
+                      placeholder="Teléfono"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formEditar.email}
+                      onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
+                      placeholder="Email"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Dirección</label>
+                    <input
+                      type="text"
+                      name="direccion"
+                      value={formEditar.direccion}
+                      onChange={(e) => setFormEditar({ ...formEditar, direccion: e.target.value })}
+                      placeholder="Dirección"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="formGroup">
+                  <label>Observaciones</label>
+                  <textarea
+                    name="observaciones"
+                    value={formEditar.observaciones}
+                    onChange={(e) => setFormEditar({ ...formEditar, observaciones: e.target.value })}
+                    placeholder="Observaciones adicionales..."
+                    rows={2}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="seccionFormulario">
+                <h3>Datos del Préstamo</h3>
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Monto del Préstamo *</label>
+                    <input
+                      type="number"
+                      name="montoPrestamo"
+                      value={formEditar.montoPrestamo}
+                      onChange={(e) => {
+                        const nuevoMonto = e.target.value;
+                        setFormEditar({ ...formEditar, montoPrestamo: nuevoMonto });
+                      }}
+                      min="1"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Tasa de Interés % *</label>
+                    <input
+                      type="number"
+                      name="tasaInteres"
+                      value={formEditar.tasaInteres}
+                      onChange={(e) => {
+                        const nuevaTasa = e.target.value;
+                        setFormEditar({ ...formEditar, tasaInteres: nuevaTasa });
+                      }}
+                      step="0.1"
+                      min="0"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="formGroup">
+                    <label>Número de Cuotas *</label>
+                    <input
+                      type="number"
+                      name="numeroCuotas"
+                      value={formEditar.numeroCuotas}
+                      onChange={(e) => {
+                        const nuevasCuotas = e.target.value;
+                        setFormEditar({ ...formEditar, numeroCuotas: nuevasCuotas });
+                      }}
+                      min="1"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Fecha del Próximo Pago *</label>
+                    <input
+                      type="date"
+                      name="fechaProximoPago"
+                      value={formEditar.fechaProximoPago}
+                      onChange={(e) => {
+                        const nuevaFecha = e.target.value;
+                        const diaPago = obtenerDiaPagoDesdeFecha(nuevaFecha);
+                        setFormEditar({
+                          ...formEditar,
+                          fechaProximoPago: nuevaFecha,
+                          diaPago: diaPago
+                        });
+                      }}
+                      required
+                      disabled={loading}
+                    />
+                    <div className="info-dia-pago">
+                      <small>
+                        <strong>Día de pago calculado:</strong> {formEditar.diaPago || obtenerDiaPagoDesdeFecha(formEditar.fechaProximoPago)}
+                      </small>
+                      <small>
+                        Nota: La fecha de registro del préstamo se calculará como un mes antes de esta fecha
+                      </small>
                     </div>
                   </div>
 
                   <div className="formGroup">
-                    <label>Observaciones</label>
-                    <textarea
-                      name="observaciones"
-                      value={formEditar.observaciones}
-                      onChange={(e) => setFormEditar({ ...formEditar, observaciones: e.target.value })}
-                      placeholder="Observaciones adicionales..."
-                      rows={2}
+                    <label>Día de Pago (automático)</label>
+                    <input
+                      type="number"
+                      name="diaPago"
+                      value={formEditar.diaPago || obtenerDiaPagoDesdeFecha(formEditar.fechaProximoPago)}
+                      readOnly
+                      className="readonly-input"
+                      disabled={loading}
+                    />
+                    <small className="help-text">
+                      Este valor se calcula automáticamente desde la fecha de próximo pago
+                    </small>
+                  </div>
+
+                  <div className="formGroup">
+                    <label>Saldo Pendiente (calculado automáticamente)</label>
+                    <input
+                      type="text"
+                      name="saldoPendiente"
+                      value={
+                        (() => {
+                          try {
+                            const monto = parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo;
+                            const tasa = parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres;
+                            const cuotas = parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas;
+                            const cuotasPagadas = clienteSeleccionado.cuotasPagadas;
+
+                            if (monto > 0 && tasa >= 0 && cuotas > 0) {
+                              const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
+                              const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
+                              const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
+                              return formatearMoneda(saldoPendienteNuevo);
+                            }
+                            return formatearMoneda(clienteSeleccionado.saldoPendiente);
+                          } catch {
+                            return formatearMoneda(clienteSeleccionado.saldoPendiente);
+                          }
+                        })()
+                      }
+                      readOnly
+                      className="readonly-input"
+                      disabled={loading}
+                    />
+                    <small className="help-text">
+                      El saldo se recalcula automáticamente basado en el nuevo monto, tasa y cuotas.
+                    </small>
+                  </div>
+                </div>
+
+                <div className="formRow">
+                  <div className="formGroup">
+                    <label>Intereses Acumulados</label>
+                    <input
+                      type="number"
+                      name="interesesAcumulados"
+                      value={formEditar.interesesAcumulados}
+                      onChange={(e) => setFormEditar({ ...formEditar, interesesAcumulados: e.target.value })}
+                      min="0"
                       disabled={loading}
                     />
                   </div>
                 </div>
 
-                <div className="seccionFormulario">
-                  <h3>Datos del Préstamo</h3>
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Monto del Préstamo *</label>
-                      <input
-                        type="number"
-                        name="montoPrestamo"
-                        value={formEditar.montoPrestamo}
-                        onChange={(e) => {
-                          const nuevoMonto = e.target.value;
-                          setFormEditar({ ...formEditar, montoPrestamo: nuevoMonto });
-                        }}
-                        min="1"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Tasa de Interés % *</label>
-                      <input
-                        type="number"
-                        name="tasaInteres"
-                        value={formEditar.tasaInteres}
-                        onChange={(e) => {
-                          const nuevaTasa = e.target.value;
-                          setFormEditar({ ...formEditar, tasaInteres: nuevaTasa });
-                        }}
-                        step="0.1"
-                        min="0"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                    <div className="formGroup">
-                      <label>Número de Cuotas *</label>
-                      <input
-                        type="number"
-                        name="numeroCuotas"
-                        value={formEditar.numeroCuotas}
-                        onChange={(e) => {
-                          const nuevasCuotas = e.target.value;
-                          setFormEditar({ ...formEditar, numeroCuotas: nuevasCuotas });
-                        }}
-                        min="1"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+                {/* Mostrar cálculo de la nueva cuota mensual */}
+                {(formEditar.montoPrestamo !== clienteSeleccionado.montoPrestamo?.toString() ||
+                  formEditar.tasaInteres !== clienteSeleccionado.tasaInteres?.toString() ||
+                  formEditar.numeroCuotas !== clienteSeleccionado.numeroCuotas?.toString() ||
+                  formEditar.fechaProximoPago !== clienteSeleccionado.fechaProximoPago) && (
+                    <div className="previewCalculoEditar">
+                      <h4>Nuevos Datos del Préstamo</h4>
+                      <div className="gridCalculo">
+                        <div className="columnaCalculo">
+                          <h5>INFORMACIÓN ACTUALIZADA</h5>
+                          <div className="listaCalculo">
+                            <div className="itemCalculo">
+                              <span>Nueva Cuota Mensual:</span>
+                              <span>
+                                {formatearMoneda(
+                                  calcularPrestamoDetallado(
+                                    parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo,
+                                    parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres,
+                                    parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas
+                                  ).cuotaMensual
+                                )}
+                              </span>
+                            </div>
 
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Fecha del Próximo Pago *</label>
-                      <input
-                        type="date"
-                        name="fechaProximoPago"
-                        value={formEditar.fechaProximoPago}
-                        onChange={(e) => {
-                          const nuevaFecha = e.target.value;
-                          setFormEditar({
-                            ...formEditar,
-                            fechaProximoPago: nuevaFecha
-                          });
-                        }}
-                        required
-                        disabled={loading}
-                      />
-                      <small className="help-text">
-                        Nota: La fecha de registro del préstamo se calculará como un mes antes de esta fecha
-                      </small>
-                    </div>
-                    
-                    <div className="formGroup">
-                      <label>Saldo Pendiente (calculado automáticamente)</label>
-                      <input
-                        type="text"
-                        name="saldoPendiente"
-                        value={
-                          (() => {
-                            try {
-                              const monto = parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo;
-                              const tasa = parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres;
-                              const cuotas = parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas;
-                              const cuotasPagadas = clienteSeleccionado.cuotasPagadas;
+                            <div className="itemCalculo">
+                              <span>Nuevo Día de Pago:</span>
+                              <span>
+                                {formEditar.diaPago || obtenerDiaPagoDesdeFecha(formEditar.fechaProximoPago || clienteSeleccionado.fechaProximoPago)}
+                              </span>
+                            </div>
 
-                              if (monto > 0 && tasa >= 0 && cuotas > 0) {
-                                const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
-                                const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
-                                const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
-                                return formatearMoneda(saldoPendienteNuevo);
-                              }
-                              return formatearMoneda(clienteSeleccionado.saldoPendiente);
-                            } catch {
-                              return formatearMoneda(clienteSeleccionado.saldoPendiente);
-                            }
-                          })()
-                        }
-                        readOnly
-                        className="readonly-input"
-                        disabled={loading}
-                      />
-                      <small className="help-text">
-                        El saldo se recalcula automáticamente basado en el nuevo monto, tasa y cuotas.
-                      </small>
-                    </div>
-                  </div>
+                            {/* NUEVO ITEM: Fecha de Registro calculada */}
+                            <div className="itemCalculo">
+                              <span>Nueva Fecha de Registro:</span>
+                              <span>
+                                {(() => {
+                                  if (!formEditar.fechaProximoPago) {
+                                    return formatearFecha(clienteSeleccionado.fechaPrestamo);
+                                  }
 
-                  <div className="formRow">
-                    <div className="formGroup">
-                      <label>Intereses Acumulados</label>
-                      <input
-                        type="number"
-                        name="interesesAcumulados"
-                        value={formEditar.interesesAcumulados}
-                        onChange={(e) => setFormEditar({ ...formEditar, interesesAcumulados: e.target.value })}
-                        min="0"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
+                                  try {
+                                    const fechaProx = new Date(formEditar.fechaProximoPago);
+                                    fechaProx.setMonth(fechaProx.getMonth() - 1);
 
-                  {/* Mostrar cálculo de la nueva cuota mensual */}
-                  {(formEditar.montoPrestamo !== clienteSeleccionado.montoPrestamo?.toString() ||
-                    formEditar.tasaInteres !== clienteSeleccionado.tasaInteres?.toString() ||
-                    formEditar.numeroCuotas !== clienteSeleccionado.numeroCuotas?.toString() ||
-                    formEditar.fechaProximoPago !== clienteSeleccionado.fechaProximoPago) && (
-                      <div className="previewCalculoEditar">
-                        <h4>Nuevos Datos del Préstamo</h4>
-                        <div className="gridCalculo">
-                          <div className="columnaCalculo">
-                            <h5>INFORMACIÓN ACTUALIZADA</h5>
-                            <div className="listaCalculo">
-                              <div className="itemCalculo">
-                                <span>Nueva Cuota Mensual:</span>
-                                <span>
-                                  {formatearMoneda(
-                                    calcularPrestamoDetallado(
-                                      parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo,
-                                      parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres,
-                                      parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas
-                                    ).cuotaMensual
-                                  )}
-                                </span>
-                              </div>
-                              
-                              {/* NUEVO ITEM: Fecha de Registro calculada */}
-                              <div className="itemCalculo">
-                                <span>Nueva Fecha de Registro:</span>
-                                <span>
-                                  {(() => {
-                                    if (!formEditar.fechaProximoPago) {
-                                      return formatearFecha(clienteSeleccionado.fechaPrestamo);
+                                    const diaOriginal = new Date(formEditar.fechaProximoPago).getDate();
+                                    const diaDespues = fechaProx.getDate();
+
+                                    if (diaDespues < diaOriginal) {
+                                      fechaProx.setDate(0);
                                     }
 
-                                    try {
-                                      // Calcular fecha de registro (un mes antes)
-                                      const fechaProx = new Date(formEditar.fechaProximoPago);
-                                      fechaProx.setMonth(fechaProx.getMonth() - 1);
+                                    const year = fechaProx.getFullYear();
+                                    const month = String(fechaProx.getMonth() + 1).padStart(2, '0');
+                                    const day = String(fechaProx.getDate()).padStart(2, '0');
+                                    return formatearFecha(`${year}-${month}-${day}`);
+                                  } catch {
+                                    return formatearFecha(clienteSeleccionado.fechaPrestamo);
+                                  }
+                                })()}
+                              </span>
+                            </div>
 
-                                      // Ajustar para casos como 31 de marzo -> 28/29 de febrero
-                                      const diaOriginal = new Date(formEditar.fechaProximoPago).getDate();
-                                      const diaDespues = fechaProx.getDate();
+                            <div className="itemCalculo">
+                              <span>Próximo Pago:</span>
+                              <span>
+                                {formatearFecha(formEditar.fechaProximoPago || clienteSeleccionado.fechaProximoPago)}
+                              </span>
+                            </div>
+                            <div className="itemCalculo total">
+                              <span>NUEVO SALDO PENDIENTE:</span>
+                              <span className="text-success">
+                                {(() => {
+                                  try {
+                                    const monto = parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo;
+                                    const tasa = parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres;
+                                    const cuotas = parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas;
+                                    const cuotasPagadas = clienteSeleccionado.cuotasPagadas;
 
-                                      if (diaDespues < diaOriginal) {
-                                        fechaProx.setDate(0); // Último día del mes anterior
-                                      }
-
-                                      const year = fechaProx.getFullYear();
-                                      const month = String(fechaProx.getMonth() + 1).padStart(2, '0');
-                                      const day = String(fechaProx.getDate()).padStart(2, '0');
-                                      return formatearFecha(`${year}-${month}-${day}`);
-                                    } catch {
-                                      return formatearFecha(clienteSeleccionado.fechaPrestamo);
+                                    if (monto > 0 && tasa >= 0 && cuotas > 0) {
+                                      const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
+                                      const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
+                                      const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
+                                      return formatearMoneda(saldoPendienteNuevo);
                                     }
-                                  })()}
-                                </span>
-                              </div>
-                              
-                              <div className="itemCalculo">
-                                <span>Próximo Pago:</span>
-                                <span>
-                                  {formatearFecha(formEditar.fechaProximoPago || clienteSeleccionado.fechaProximoPago)}
-                                </span>
-                              </div>
-                              <div className="itemCalculo total">
-                                <span>NUEVO SALDO PENDIENTE:</span>
-                                <span className="text-success">
-                                  {(() => {
-                                    try {
-                                      const monto = parseFloat(formEditar.montoPrestamo) || clienteSeleccionado.montoPrestamo;
-                                      const tasa = parseFloat(formEditar.tasaInteres) || clienteSeleccionado.tasaInteres;
-                                      const cuotas = parseInt(formEditar.numeroCuotas) || clienteSeleccionado.numeroCuotas;
-                                      const cuotasPagadas = clienteSeleccionado.cuotasPagadas;
-
-                                      if (monto > 0 && tasa >= 0 && cuotas > 0) {
-                                        const calculo = calcularPrestamoDetallado(monto, tasa, cuotas);
-                                        const totalPagadoHastaAhora = cuotasPagadas * calculo.cuotaMensual;
-                                        const saldoPendienteNuevo = Math.max(0, calculo.totalPagar - totalPagadoHastaAhora);
-                                        return formatearMoneda(saldoPendienteNuevo);
-                                      }
-                                      return formatearMoneda(clienteSeleccionado.saldoPendiente);
-                                    } catch {
-                                      return formatearMoneda(clienteSeleccionado.saldoPendiente);
-                                    }
-                                  })()}
-                                </span>
-                              </div>
+                                    return formatearMoneda(clienteSeleccionado.saldoPendiente);
+                                  } catch {
+                                    return formatearMoneda(clienteSeleccionado.saldoPendiente);
+                                  }
+                                })()}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    )}
-                </div>
-
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    onClick={cerrarModalEditar}
-                    className="cancel-btn"
-                    disabled={loading}
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" className="saveButton" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <div className="spinner"></div>
-                        <span>ACTUALIZANDO PRÉSTAMO...</span>
-                      </>
-                    ) : (
-                      'ACTUALIZAR PRÉSTAMO'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Abono de Intereses */}
-      {isModalAbonoInteresesOpen && clienteSeleccionado && (
-        <div className="modalOverlay">
-          <div className="modalContent modal-abono-simplificado">
-            <div className="modalHeader">
-              <h2>Abonar Intereses - {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h2>
-              <button className="closeButton" onClick={cerrarModalAbonoIntereses}>
-                ×
-              </button>
-            </div>
-
-            <div className="modalBody">
-              <div className="info-cliente-abono">
-                <div className="info-resumen-abono">
-                  <div className="info-item-abono">
-                    <span className="label">Cuota Mensual:</span>
-                    <span className="value">{formatearMoneda(clienteSeleccionado.cuotaMensual)}</span>
-                  </div>
-                  <div className="info-item-abono">
-                    <span className="label">Interés Mensual:</span>
-                    <span className="value">{formatearMoneda(clienteSeleccionado.interesMensual)}</span>
-                  </div>
-                  <div className="info-item-abono destacado">
-                    <span className="label">Intereses Acumulados:</span>
-                    <span className={`value ${clienteSeleccionado.interesesAcumulados > 0 ? 'text-danger' : ''}`}>
-                      {formatearMoneda(clienteSeleccionado.interesesAcumulados)}
-                    </span>
-                  </div>
-                  <div className="info-item-abono">
-                    <span className="label">Saldo Pendiente:</span>
-                    <span className="value">{formatearMoneda(clienteSeleccionado.saldoPendiente)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <form onSubmit={registrarAbonoIntereses} className="form-abono-simplificado">
-                <div className="seccion-tipo-abono-simplificado">
-                  <h3>Tipo de Abono de Intereses</h3>
-
-                  <div className="opciones-abono-intereses">
-                    <button
-                      type="button"
-                      className={`opcion-abono ${formAbonoIntereses.tipo === 'intereses_mensuales' ? 'active' : ''}`}
-                      onClick={() => {
-                        setFormAbonoIntereses({
-                          ...formAbonoIntereses,
-                          tipo: 'intereses_mensuales',
-                          observaciones: 'Pago de intereses mensuales',
-                          montoAbono: clienteSeleccionado.interesMensual.toString()
-                        });
-                      }}
-                    >
-                      <div className="info-opcion">
-                        <strong>Intereses Mensuales</strong>
-                        <p>Pago del interés correspondiente al mes actual</p>
-                        <span className="monto-opcion">{formatearMoneda(clienteSeleccionado.interesMensual)}</span>
-                      </div>
-                    </button>
-
-                    {clienteSeleccionado.interesesAcumulados > 0 && (
-                      <button
-                        type="button"
-                        className={`opcion-abono ${formAbonoIntereses.tipo === 'intereses_acumulados' ? 'active' : ''}`}
-                        onClick={() => {
-                          setFormAbonoIntereses({
-                            ...formAbonoIntereses,
-                            tipo: 'intereses_acumulados',
-                            observaciones: 'Pago de intereses acumulados',
-                            montoAbono: clienteSeleccionado.interesesAcumulados.toString()
-                          });
-                        }}
-                      >
-                        <div className="info-opcion">
-                          <strong>Intereses Acumulados</strong>
-                          <p>Pago de intereses pendientes por mora</p>
-                          <span className="monto-opcion text-danger">{formatearMoneda(clienteSeleccionado.interesesAcumulados)}</span>
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="form-row-abono">
-                  <div className="form-group-abono">
-                    <label>Monto a Abonar</label>
-                    <input
-                      type="number"
-                      value={formAbonoIntereses.montoAbono}
-                      onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, montoAbono: e.target.value })}
-                      placeholder="Monto"
-                      min="1"
-                      required
-                      disabled={loading}
-                      className="input-monto-abono"
-                    />
-                  </div>
-
-                  <div className="form-group-abono">
-                    <label>Fecha del Abono</label>
-                    <input
-                      type="date"
-                      value={formAbonoIntereses.fechaAbono}
-                      onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, fechaAbono: e.target.value })}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group-abono">
-                  <label>Observaciones</label>
-                  <textarea
-                    value={formAbonoIntereses.observaciones}
-                    onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, observaciones: e.target.value })}
-                    placeholder="Descripción del abono..."
-                    rows={2}
-                    disabled={loading}
-                    className="textarea-observaciones"
-                  />
-                </div>
-
-                <div className="resumen-abono-final">
-                  <h4>Resumen del Abono</h4>
-                  <div className="detalles-resumen-abono">
-                    <div className="item-resumen-abono">
-                      <span>Tipo:</span>
-                      <strong>
-                        {formAbonoIntereses.tipo === 'intereses_mensuales' ? 'Intereses Mensuales' : 'Intereses Acumulados'}
-                      </strong>
                     </div>
-                    <div className="item-resumen-abono">
-                      <span>Monto:</span>
-                      <strong className="monto-final-abono">
-                        {formatearMoneda(parseFloat(formAbonoIntereses.montoAbono) || 0)}
-                      </strong>
-                    </div>
-                    <div className="item-resumen-abono">
-                      <span>Fecha:</span>
-                      <strong>{formatearFecha(formAbonoIntereses.fechaAbono)}</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="submit" className="btn-abonar" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <div className="spinner"></div>
-                      <span>REGISTRANDO ABONO...</span>
-                    </>
-                  ) : (
-                    <>
-                      ABONAR INTERESES
-                    </>
                   )}
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmación */}
-      {showConfirmModal && (
-        <div className="modalOverlay">
-          <div className="modalContent confirm-modal">
-            <div className="modalHeader">
-              <h2>
-                {confirmAction.type === 'delete'
-                  ? '¿Eliminar Cliente?'
-                  : '¿Marcar en Mora?'}
-              </h2>
-              <button
-                className="closeButton"
-                onClick={() => manejarConfirmacion(false)}
-                disabled={loading}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modalBody">
-              <div className="confirm-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {confirmAction.type === 'delete' ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.694-.833-2.464 0L4.146 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  )}
-                </svg>
               </div>
 
-              <div className="confirm-message">
-                <p>
-                  {confirmAction.type === 'delete'
-                    ? `¿Estás seguro de que quieres eliminar a ${confirmAction.clienteNombre}?`
-                    : `¿Marcar a ${confirmAction.clienteNombre} como en mora?`
-                  }
-                </p>
-
-                <p className="confirm-details">
-                  {confirmAction.type === 'delete'
-                    ? 'Esta acción no se puede deshacer. Se eliminarán todos los datos del cliente, préstamos y pagos asociados.'
-                    : 'Esta acción cambiará el estado del cliente y sus préstamos pendientes a "mora".'
-                  }
-                </p>
-              </div>
-
-              <div className="confirm-actions">
+              <div className="form-actions">
                 <button
+                  type="button"
+                  onClick={cerrarModalEditar}
                   className="cancel-btn"
-                  onClick={() => manejarConfirmacion(false)}
                   disabled={loading}
                 >
                   Cancelar
                 </button>
-                <button
-                  className={confirmAction.type === 'delete' ? 'delete-confirm-btn' : 'mora-confirm-btn'}
-                  onClick={() => manejarConfirmacion(true)}
-                  disabled={loading}
-                >
+                <button type="submit" className="saveButton" disabled={loading}>
                   {loading ? (
                     <>
                       <div className="spinner"></div>
-                      <span>PROCESANDO...</span>
+                      <span>ACTUALIZANDO PRÉSTAMO...</span>
                     </>
                   ) : (
-                    confirmAction.type === 'delete' ? 'ELIMINAR DEFINITIVAMENTE' : 'MARCAR EN MORA'
+                    'ACTUALIZAR PRÉSTAMO'
                   )}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    )}
+
+    {/* Modal Abono de Intereses */}
+    {isModalAbonoInteresesOpen && clienteSeleccionado && (
+      <div className="modalOverlay">
+        <div className="modalContent modal-abono-simplificado">
+          <div className="modalHeader">
+            <h2>Abonar Intereses - {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h2>
+            <button className="closeButton" onClick={cerrarModalAbonoIntereses}>
+              ×
+            </button>
+          </div>
+
+          <div className="modalBody">
+            <div className="info-cliente-abono">
+              <div className="info-resumen-abono">
+                <div className="info-item-abono">
+                  <span className="label">Monto Prestado:</span>
+                  <span className="value">{formatearMoneda(clienteSeleccionado.montoPrestamo)}</span>
+                </div>
+                <div className="info-item-abono">
+                  <span className="label">Tasa de Interés Anual:</span>
+                  <span className="value">{clienteSeleccionado.tasaInteres}%</span>
+                </div>
+                <div className="info-item-abono">
+                  <span className="label">Cuota Mensual:</span>
+                  <span className="value">{formatearMoneda(clienteSeleccionado.cuotaMensual)}</span>
+                </div>
+                <div className="info-item-abono">
+                  <span className="label">Interés Mensual:</span>
+                  <span className="value">{formatearMoneda(clienteSeleccionado.interesMensual)}</span>
+                </div>
+                <div className="info-item-abono destacado">
+                  <span className="label">Intereses Acumulados:</span>
+                  <span className={`value ${clienteSeleccionado.interesesAcumulados > 0 ? 'text-danger' : ''}`}>
+                    {formatearMoneda(clienteSeleccionado.interesesAcumulados)}
+                  </span>
+                </div>
+                <div className="info-item-abono">
+                  <span className="label">Saldo Pendiente:</span>
+                  <span className="value">{formatearMoneda(clienteSeleccionado.saldoPendiente)}</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={registrarAbonoIntereses} className="form-abono-simplificado">
+              {/* Selección de tipo de cálculo */}
+              <div className="seccion-tipo-calculo">
+                <h3>Tipo de Cálculo de Intereses</h3>
+                <div className="opciones-calculo-intereses">
+                  <button
+                    type="button"
+                    className={`opcion-calculo ${formAbonoIntereses.tipoCalculo === 'mensual' ? 'active' : ''}`}
+                    onClick={() => manejarCambioTipoCalculo('mensual')}
+                  >
+                    <div className="info-opcion">
+                      <div className="icono-opcion">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                      <strong>Interés Mensual Completo</strong>
+                      <p>Pago del interés correspondiente a 30 días</p>
+                      <span className="monto-opcion">{formatearMoneda(clienteSeleccionado.interesMensual)}</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`opcion-calculo ${formAbonoIntereses.tipoCalculo === 'diario' ? 'active' : ''}`}
+                    onClick={() => manejarCambioTipoCalculo('diario')}
+                  >
+                    <div className="info-opcion">
+                      <div className="icono-opcion">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </div>
+                      <strong>Cálculo por Días</strong>
+                      <p>Calcular intereses por días específicos</p>
+                      <span className="texto-opcion">Personalizable</span>
+                    </div>
+                  </button>
+
+                  {clienteSeleccionado.interesesAcumulados > 0 && (
+                    <button
+                      type="button"
+                      className={`opcion-calculo ${formAbonoIntereses.tipoCalculo === 'acumulado' ? 'active' : ''}`}
+                      onClick={() => manejarCambioTipoCalculo('acumulado')}
+                    >
+                      <div className="info-opcion">
+                        <div className="icono-opcion">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                          </svg>
+                        </div>
+                        <strong>Intereses Acumulados</strong>
+                        <p>Pago de intereses pendientes por mora</p>
+                        <span className="monto-opcion text-danger">{formatearMoneda(clienteSeleccionado.interesesAcumulados)}</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* SECCIÓN PARA CÁLCULO POR DÍAS */}
+              {formAbonoIntereses.tipoCalculo === 'diario' && (
+                <div className="seccion-calculo-diario">
+                  <h4>Cálculo por Días</h4>
+                  <div className="info-calculo-diario">
+                    <div className="item-info-calculo">
+                      <span>Tasa de Interés Anual:</span>
+                      <strong>{clienteSeleccionado.tasaInteres}%</strong>
+                    </div>
+                    <div className="item-info-calculo">
+                      <span>Tasa Diaria Calculada:</span>
+                      <strong>{(calcularTasaDiaria(clienteSeleccionado.tasaInteres) * 100).toFixed(4)}%</strong>
+                    </div>
+                    <div className="item-info-calculo">
+                      <span>Monto Base:</span>
+                      <strong>{formatearMoneda(clienteSeleccionado.montoPrestamo)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="form-row-abono">
+                    <div className="form-group-abono">
+                      <label>Número de Días</label>
+                      <div className="input-con-botones">
+                        <input
+                          type="number"
+                          value={formAbonoIntereses.diasInteres}
+                          onChange={(e) => manejarCambioDiasInteres(e.target.value)}
+                          placeholder="Días"
+                          min="1"
+                          max="30"
+                          required
+                          disabled={loading}
+                          className="input-dias-interes"
+                        />
+                        <div className="botones-dias-rapidos">
+                          <button 
+                            type="button" 
+                            className="btn-dia-rapido"
+                            onClick={() => manejarCambioDiasInteres('7')}
+                          >
+                            7 días
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn-dia-rapido"
+                            onClick={() => manejarCambioDiasInteres('15')}
+                          >
+                            15 días
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn-dia-rapido"
+                            onClick={() => manejarCambioDiasInteres('30')}
+                          >
+                            30 días
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-group-abono">
+                      <label>Intereses Calculados</label>
+                      <div className="monto-calculado">
+                        <strong className="monto-resultado">
+                          {formatearMoneda(parseFloat(formAbonoIntereses.montoCalculado) || 0)}
+                        </strong>
+                        <small>
+                          Cálculo proporcional: ({formatearMoneda(clienteSeleccionado.interesMensual)} ÷ 30) × {formAbonoIntereses.diasInteres} días
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="form-row-abono">
+                <div className="form-group-abono">
+                  <label>Monto a Abonar</label>
+                  <input
+                    type="number"
+                    value={formAbonoIntereses.montoAbono}
+                    onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, montoAbono: e.target.value })}
+                    placeholder="Monto"
+                    min="1"
+                    required
+                    disabled={loading}
+                    className="input-monto-abono"
+                  />
+                </div>
+
+                <div className="form-group-abono">
+                  <label>Fecha del Abono</label>
+                  <input
+                    type="date"
+                    value={formAbonoIntereses.fechaAbono}
+                    onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, fechaAbono: e.target.value })}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-abono">
+                <label>Observaciones</label>
+                <textarea
+                  value={formAbonoIntereses.observaciones}
+                  onChange={(e) => setFormAbonoIntereses({ ...formAbonoIntereses, observaciones: e.target.value })}
+                  placeholder="Descripción del abono..."
+                  rows={2}
+                  disabled={loading}
+                  className="textarea-observaciones"
+                />
+              </div>
+
+              <div className="resumen-abono-final">
+                <h4>Resumen del Abono</h4>
+                <div className="detalles-resumen-abono">
+                  <div className="item-resumen-abono">
+                    <span>Tipo:</span>
+                    <strong>
+                      {formAbonoIntereses.tipoCalculo === 'mensual' ? 'Intereses Mensuales' : 
+                       formAbonoIntereses.tipoCalculo === 'diario' ? `Intereses por ${formAbonoIntereses.diasInteres} días` : 
+                       'Intereses Acumulados'}
+                    </strong>
+                  </div>
+                  <div className="item-resumen-abono">
+                    <span>Monto:</span>
+                    <strong className="monto-final-abono">
+                      {formatearMoneda(parseFloat(formAbonoIntereses.montoAbono) || 0)}
+                    </strong>
+                  </div>
+                  <div className="item-resumen-abono">
+                    <span>Fecha:</span>
+                    <strong>{formatearFecha(formAbonoIntereses.fechaAbono)}</strong>
+                  </div>
+                  {formAbonoIntereses.tipoCalculo === 'diario' && (
+                    <div className="item-resumen-abono">
+                      <span>Detalle Cálculo:</span>
+                      <small>
+                        {formAbonoIntereses.diasInteres} días × {formatearMoneda(clienteSeleccionado.interesMensual / 30)} diarios
+                      </small>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button type="submit" className="btn-abonar" disabled={loading}>
+                {loading ? (
+                  <>
+                    <div className="spinner"></div>
+                    <span>REGISTRANDO ABONO...</span>
+                  </>
+                ) : (
+                  <>
+                    ABONAR INTERESES
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 }

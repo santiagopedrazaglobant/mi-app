@@ -1,5 +1,3 @@
-
-
 /* ============================================================================
    RESET Y ESTILOS BASE
    ============================================================================ */
@@ -176,6 +174,333 @@ body {
 }
 
 /* ============================================================================
+   BUSCADOR INTELIGENTE POR DÍA DE PAGO (ESTILOS UNIFICADOS)
+   ============================================================================ */
+.buscador-clientes-dia {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .buscador-clientes-dia {
+    max-width: 100%;
+    margin: 0.5rem 0;
+  }
+}
+
+.search-input-with-suggestions {
+  position: relative;
+  width: 100%;
+}
+
+.search-day-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #000000;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  height: 2.75rem;
+  font-family: inherit;
+}
+
+.search-day-input:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.search-day-input::placeholder {
+  color: #999999;
+  font-size: 0.875rem;
+}
+
+.search-icon-container {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.search-icon-container svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.search-loading-spinner {
+  position: absolute;
+  right: 4rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.spinner-small {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #000000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.btn-buscar-dia {
+  position: absolute;
+  right: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.btn-buscar-dia:hover:not(:disabled) {
+  background: #f5f5f5;
+  color: #000000;
+}
+
+.btn-buscar-dia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-limpiar-dia {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.btn-limpiar-dia:hover:not(:disabled) {
+  background: #f5f5f5;
+  color: #000000;
+}
+
+.btn-limpiar-dia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sugerencias de clientes */
+.suggestions-dropdown.client-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  margin-top: 0.25rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.suggestions-header {
+  background: #f5f5f5;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.75rem;
+  color: #666666;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggestions-header span {
+  font-weight: 600;
+  color: #000000;
+}
+
+.suggestion-item.client-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f5f5f5;
+  background: #ffffff;
+}
+
+.suggestion-item.client-suggestion:hover {
+  background: #f5f5f5;
+}
+
+.suggestion-item.client-suggestion:last-child {
+  border-bottom: none;
+}
+
+.suggestion-icon.cliente-icon {
+  flex-shrink: 0;
+  color: #666666;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-title {
+  display: block;
+  font-weight: 600;
+  color: #000000;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.suggestion-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.suggestion-subtitle div {
+  margin-bottom: 0.125rem;
+}
+
+.suggestion-action {
+  flex-shrink: 0;
+  color: #999999;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.suggestion-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.btn-ver-todos {
+  width: 100%;
+  padding: 0.5rem;
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.btn-ver-todos:hover {
+  background: #333333;
+  border-color: #333333;
+}
+
+/* Indicador de búsqueda activa */
+.indicador-busqueda-activa {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  margin: 1rem;
+  padding: 1rem;
+  animation: slideIn 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .indicador-busqueda-activa {
+    margin: 0.75rem;
+  }
+}
+
+.indicador-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.indicador-icono {
+  color: #000000;
+  background: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+}
+
+.indicador-texto {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.indicador-texto strong {
+  color: #000000;
+  margin-right: 0.5rem;
+}
+
+.indicador-cerrar {
+  background: transparent;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  padding: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+}
+
+.indicador-cerrar:hover:not(:disabled) {
+  background: #f5f5f5;
+  color: #000000;
+}
+
+.indicador-cerrar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
    CONTENIDO PRINCIPAL
    ============================================================================ */
 main {
@@ -322,6 +647,7 @@ main {
   flex-direction: column;
   gap: 1.25rem;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 @media (min-width: 768px) {
@@ -447,6 +773,21 @@ main {
   width: 0.75rem;
   height: 0.75rem;
   flex-shrink: 0;
+  color: #666666;
+}
+
+.proximo-pago {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: #666666;
+  margin-top: 0.5rem;
+}
+
+.proximo-pago .icon {
+  width: 1rem;
+  height: 1rem;
   color: #666666;
 }
 
@@ -659,6 +1000,7 @@ main {
   flex-direction: column;
   gap: 1.25rem;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 @media (min-width: 768px) {
@@ -795,13 +1137,6 @@ main {
   }
 }
 
-.historialHeader h4 {
-  color: #000000;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin: 0;
-}
-
 .toggleHistorial {
   display: flex;
   align-items: center;
@@ -846,113 +1181,99 @@ main {
   border-radius: 0.25rem;
   border: 1px solid #e0e0e0;
   overflow: hidden;
+  margin-top: 1rem;
 }
 
-.tablaHistorial {
-  width: 100%;
+.tablaHistorialCompleta {
   overflow-x: auto;
+  background: #ffffff;
+  border-radius: 0.25rem;
+  border: 1px solid #e0e0e0;
 }
 
-.tablaHeader {
-  display: grid;
-  grid-template-columns: 80px 120px 1fr 1fr 1fr;
+.tablaHistorialCompleta table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.tablaHistorialCompleta th {
   background: #f5f5f5;
   padding: 0.75rem 1.25rem;
-  font-size: 0.625rem;
-  font-weight: 500;
+  text-align: left;
+  font-weight: 600;
   color: #666666;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  min-width: 500px;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
 }
 
-.filaPago {
-  display: grid;
-  grid-template-columns: 80px 120px 1fr 1fr 1fr;
+.tablaHistorialCompleta td {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #f0f0f0;
-  min-width: 500px;
+  color: #000000;
+  font-size: 0.8125rem;
 }
 
-.filaPago.par {
+.tablaHistorialCompleta tbody tr:hover {
   background: #fafafa;
 }
 
-.columna {
-  display: flex;
-  align-items: center;
-  padding: 0 0.25rem;
-}
-
-.text-right {
-  justify-content: flex-end;
-}
-
-.text-success {
-  color: #000000;
-  font-weight: 600;
-}
-
-.resumenPagos {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
+.tablaHistorialCompleta tfoot {
   background: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
 }
 
-@media (min-width: 640px) {
-  .resumenPagos {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem;
-  }
-}
-
-.infoResumen {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.infoResumen.text-right {
-  align-items: flex-end;
-}
-
-.infoResumen .label {
-  font-size: 0.6875rem;
-  color: #666666;
-}
-
-.infoResumen .valor {
-  font-size: 0.8125rem;
+.tablaHistorialCompleta tfoot td {
   font-weight: 600;
-  color: #000000;
+  border-bottom: none;
 }
 
-.infoResumen .valor.total {
+.badgeEstado {
+  background: #f0f0f0;
   color: #000000;
-  font-size: 0.9375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border: 1px solid #e0e0e0;
 }
 
-.sinPagos {
+.badgeResumen {
+  background: #f0f0f0;
+  color: #000000;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #e0e0e0;
+}
+
+.sinHistorial {
   text-align: center;
-  padding: 1.875rem 1.25rem;
-  color: #666666;
+  padding: 2.5rem 1.25rem;
+  background: #ffffff;
+  border-radius: 0.25rem;
+  border: 1px solid #e0e0e0;
 }
 
-.sinPagos .icono {
-  width: 2.25rem;
-  height: 2.25rem;
+.iconoHistorial {
+  width: 3rem;
+  height: 3rem;
   background: #f5f5f5;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 0.75rem;
+  margin: 0 auto 1.25rem;
   color: #999999;
+}
+
+.sinHistorial p {
+  color: #666666;
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
 }
 
 /* ============================================================================
@@ -969,12 +1290,6 @@ main {
   .clienteAcciones {
     width: auto;
     min-width: 140px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .clienteAcciones {
-    margin-left: 1.875rem;
   }
 }
 
@@ -1006,6 +1321,58 @@ main {
   border-color: #333333;
 }
 
+.btn-editar {
+  background: #ffffff;
+  color: #666666;
+  border: 1px solid #e0e0e0;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  text-align: center;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .btn-editar {
+    width: auto;
+  }
+}
+
+.btn-editar:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #000000;
+}
+
+.btn-abono {
+  background: #ffffff;
+  color: #666666;
+  border: 1px solid #e0e0e0;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  text-align: center;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .btn-abono {
+    width: auto;
+  }
+}
+
+.btn-abono:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #000000;
+}
+
 .delete-btn {
   background: #ffffff;
   color: #666666;
@@ -1032,13 +1399,11 @@ main {
   color: #000000;
 }
 
-.delete-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .btn-pago:disabled,
-.btn-pago-detalle:disabled {
+.btn-pago-detalle:disabled,
+.btn-editar:disabled,
+.btn-abono:disabled,
+.delete-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -1051,6 +1416,7 @@ main {
   border-radius: 0.375rem;
   padding: 1.875rem;
   border: 1px solid #e0e0e0;
+  position: relative;
 }
 
 .prestamoHeader {
@@ -1126,7 +1492,19 @@ main {
   font-size: 0.8125rem;
 }
 
-/* INFORMACIÓN DE CONTACTO - AÑADIDO DESDE EL COMPONENTE */
+.accionesPrestamo {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 768px) {
+  .accionesPrestamo {
+    flex-direction: column;
+    min-width: 140px;
+  }
+}
+
 .infoContacto {
   display: flex;
   flex-direction: column;
@@ -1184,15 +1562,9 @@ main {
   overflow-wrap: break-word;
 }
 
-/* Para campos de email específicamente */
-.infoItem[data-type="email"] span {
-  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-  font-size: 0.8125rem;
-}
-
-/* Para campos de dirección específicamente */
-.infoItem[data-type="address"] span {
-  line-height: 1.5;
+.infoItem.full-width {
+  width: 100%;
+  min-width: 100%;
 }
 
 .seccionDesglose {
@@ -1370,7 +1742,7 @@ main {
 }
 
 /* ============================================================================
-   HISTORIAL DE PAGOS
+   HISTORIAL DE PAGOS EN DETALLES
    ============================================================================ */
 .seccionHistorial {
   margin-top: 1.875rem;
@@ -1398,114 +1770,6 @@ main {
   color: #000000;
   font-size: 1rem;
   font-weight: 600;
-  margin: 0;
-}
-
-.contadorPagos {
-  background: #f5f5f5;
-  color: #666666;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.tablaHistorialCompleta {
-  overflow-x: auto;
-  background: #ffffff;
-  border-radius: 0.25rem;
-  border: 1px solid #e0e0e0;
-}
-
-.tablaHistorialCompleta table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-}
-
-.tablaHistorialCompleta th {
-  background: #f5f5f5;
-  padding: 0.75rem 1.25rem;
-  text-align: left;
-  font-weight: 600;
-  color: #666666;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e0e0e0;
-  white-space: nowrap;
-}
-
-.tablaHistorialCompleta td {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #f0f0f0;
-  color: #000000;
-  font-size: 0.8125rem;
-}
-
-.tablaHistorialCompleta tbody tr:hover {
-  background: #fafafa;
-}
-
-.tablaHistorialCompleta tfoot {
-  background: #f5f5f5;
-}
-
-.tablaHistorialCompleta tfoot td {
-  font-weight: 600;
-  border-bottom: none;
-}
-
-.badgeEstado {
-  background: #f0f0f0;
-  color: #000000;
-  padding: 0.25rem 0.625rem;
-  border-radius: 0.75rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  border: 1px solid #e0e0e0;
-}
-
-.badgeResumen {
-  background: #f0f0f0;
-  color: #000000;
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid #e0e0e0;
-}
-
-.sinHistorial {
-  text-align: center;
-  padding: 2.5rem 1.25rem;
-  background: #ffffff;
-  border-radius: 0.25rem;
-  border: 1px solid #e0e0e0;
-}
-
-.iconoHistorial {
-  width: 3rem;
-  height: 3rem;
-  background: #f5f5f5;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.25rem;
-  color: #999999;
-}
-
-.sinHistorial p {
-  color: #666666;
-  font-size: 1rem;
-  margin: 0 0 0.5rem 0;
-}
-
-.sinHistorial .subtitulo {
-  color: #999999;
-  font-size: 0.8125rem;
   margin: 0;
 }
 
@@ -1546,6 +1810,7 @@ main {
   background: #ffffff;
   position: sticky;
   top: 0;
+  z-index: 1;
 }
 
 .modalHeader h2 {
@@ -1587,6 +1852,344 @@ main {
 
 .modalBody {
   padding: 1.5rem;
+}
+
+/* ============================================================================
+   ESTILOS ESPECÍFICOS PARA FORMULARIO DE PAGO
+   ============================================================================ */
+
+/* ============================================================================
+   ESTILOS PARA FORMULARIO DE PAGO (ACTUALIZADO)
+   ============================================================================ */
+
+/* Formulario de pago dentro del modal */
+.pagoForm {
+  padding: 0;
+  margin: 0;
+}
+
+/* Información del cliente en formulario de pago */
+.infoCliente {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+@media (min-width: 640px) {
+  .infoRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.infoRow span {
+  color: #666666;
+  font-size: 0.8125rem;
+}
+
+.infoRow strong {
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Campos del formulario de pago */
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .formRow {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+.pagoForm .formGroup {
+  margin-bottom: 1.25rem;
+  flex: 1;
+}
+
+.pagoForm .formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.pagoForm input,
+.pagoForm textarea,
+.pagoForm select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #000000;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.pagoForm input:focus,
+.pagoForm textarea:focus,
+.pagoForm select:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.pagoForm input:disabled,
+.pagoForm textarea:disabled,
+.pagoForm select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: #999999;
+}
+
+.pagoForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Botón de guardar en formulario de pago */
+.pagoForm .saveButton {
+  width: 100%;
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  padding: 0.875rem;
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pagoForm .saveButton:hover:not(:disabled) {
+  background: #333333;
+  border-color: #333333;
+}
+
+.pagoForm .saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagoForm .saveButton .spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s linear infinite;
+}
+
+/* Historial de pagos en modal de pago */
+.historialPagos {
+  margin-top: 1.875rem;
+  padding-top: 1.875rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.historialPagos h3 {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.listaPagos {
+  margin-top: 1rem;
+}
+
+/* Tabla de pagos en modal */
+.tablaPagosModal {
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 0.25rem;
+  border: 1px solid #e0e0e0;
+}
+
+.tablaPagosModal table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+.tablaPagosModal th {
+  background: #f5f5f5;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #666666;
+  font-size: 0.6875rem;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.tablaPagosModal td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #000000;
+  font-size: 0.8125rem;
+}
+
+.tablaPagosModal tbody tr:hover {
+  background: #fafafa;
+}
+
+.tablaPagosModal td:first-child {
+  font-weight: 600;
+  color: #000000;
+}
+
+/* Estado vacío de historial de pagos */
+.sinPagosModal {
+  text-align: center;
+  padding: 2.5rem 1.25rem;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #e0e0e0;
+  margin: 1.25rem 0;
+}
+
+.sinPagosModal .icono {
+  width: 3rem;
+  height: 3rem;
+  background: #f5f5f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  color: #999999;
+}
+
+.sinPagosModal .icono svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.sinPagosModal p {
+  color: #666666;
+  font-size: 0.9375rem;
+  margin: 0 0 1.25rem 0;
+}
+
+.sinPagosModal .btn-pago-detalle {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.sinPagosModal .btn-pago-detalle:hover:not(:disabled) {
+  background: #333333;
+  border-color: #333333;
+}
+
+/* Estilos específicos para botón de pago en formulario */
+.btn-pago-detalle {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .btn-pago-detalle {
+    width: auto;
+  }
+}
+
+.btn-pago-detalle:hover:not(:disabled) {
+  background: #333333;
+  border-color: #333333;
+}
+
+.btn-pago-detalle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Clase para texto de éxito en tabla de pagos */
+.text-success {
+  color: #000000;
+  font-weight: 600;
+}
+
+/* Responsive específico para formulario de pago */
+@media (max-width: 768px) {
+  .pagoForm .formGroup {
+    margin-bottom: 1rem;
+  }
+  
+  .infoCliente {
+    padding: 1.25rem;
+  }
+  
+  .tablaPagosModal table {
+    min-width: 400px;
+  }
+  
+  .tablaPagosModal th,
+  .tablaPagosModal td {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Animación de entrada para formulario de pago */
+@keyframes slideInPago {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalContent .pagoForm {
+  animation: slideInPago 0.3s ease;
 }
 
 /* ============================================================================
@@ -1860,19 +2463,6 @@ main {
   border-color: #333333;
 }
 
-.listaClientes > p,
-.listaPrestamosActivos > p,
-.detallesPrestamos > p {
-  text-align: center;
-  color: #999999;
-  padding: 2.5rem 1.25rem;
-  font-size: 1rem;
-  background: #ffffff;
-  border-radius: 0.25rem;
-  border: 1px solid #e0e0e0;
-  margin: 0;
-}
-
 /* ============================================================================
    MENSAJES DE ESTADO
    ============================================================================ */
@@ -2110,6 +2700,1344 @@ main {
 }
 
 /* ============================================================================
+   FORMULARIOS VERTICALES
+   ============================================================================ */
+
+/* Formulario Nuevo Cliente - VERTICAL */
+.clienteForm .seccionFormulario {
+  margin-bottom: 2rem;
+}
+
+.clienteForm .seccionFormulario h3 {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Formulario vertical - todos los campos en columna */
+.clienteForm .formGroup {
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.clienteForm .formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.clienteForm input,
+.clienteForm textarea,
+.clienteForm select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #000000;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.clienteForm input:focus,
+.clienteForm textarea:focus,
+.clienteForm select:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.clienteForm input:disabled,
+.clienteForm textarea:disabled,
+.clienteForm select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  color: #999999;
+}
+
+.clienteForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Información del día de pago */
+.info-dia-pago {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 0.25rem;
+  border: 1px solid #e0e0e0;
+}
+
+.info-dia-pago small {
+  display: block;
+  font-size: 0.75rem;
+  color: #666666;
+  line-height: 1.4;
+  margin-bottom: 0.25rem;
+}
+
+.info-dia-pago small:last-child {
+  margin-bottom: 0;
+}
+
+.info-dia-pago small strong {
+  color: #000000;
+  font-weight: 600;
+}
+
+/* Formulario vertical para fecha y día de pago */
+.form-row-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .form-row-vertical {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* Preview cálculo vertical */
+.previewCalculo {
+  background: #ffffff;
+  border-radius: 0.375rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.previewCalculo h4 {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.gridCalculo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .gridCalculo {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.columnaCalculo {
+  background: #ffffff;
+  border-radius: 0.25rem;
+  padding: 1.25rem;
+  border: 1px solid #e0e0e0;
+}
+
+.columnaCalculo h5 {
+  background: #f5f5f5;
+  padding: 0.75rem 1rem;
+  margin: -1.25rem -1.25rem 1rem -1.25rem;
+  font-size: 0.8125rem;
+  color: #000000;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.listaCalculo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.itemCalculo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.itemCalculo:last-child {
+  border-bottom: none;
+}
+
+.itemCalculo span {
+  font-size: 0.8125rem;
+}
+
+.itemCalculo span:first-child {
+  color: #666666;
+}
+
+.itemCalculo span:last-child {
+  color: #000000;
+  font-weight: 600;
+}
+
+.itemCalculo.total {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.itemCalculo.total span:first-child {
+  color: #000000;
+  font-weight: 600;
+}
+
+.itemCalculo.total span:last-child {
+  font-size: 0.9375rem;
+  color: #000000;
+}
+
+.saveButton {
+  width: 100%;
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  padding: 0.875rem;
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #333333;
+  border-color: #333333;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saveButton .spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================================================
+   MODAL REGISTRAR PAGO - VERTICAL
+   ============================================================================ */
+.infoCliente {
+  background: #f5f5f5;
+  border-radius: 0.25rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+@media (min-width: 640px) {
+  .infoRow {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.infoRow span {
+  color: #666666;
+  font-size: 0.8125rem;
+}
+
+.infoRow strong {
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Formulario de pago vertical */
+.pagoForm .formGroup {
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.pagoForm .formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.historialPagos {
+  margin-top: 1.875rem;
+  padding-top: 1.875rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.historialPagos h3 {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.listaPagos {
+  margin-top: 1rem;
+}
+
+.tablaPagosModal {
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 0.25rem;
+  border: 1px solid #e0e0e0;
+}
+
+.tablaPagosModal table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+.tablaPagosModal th {
+  background: #f5f5f5;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #666666;
+  font-size: 0.6875rem;
+  border-bottom: 1px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.tablaPagosModal td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #000000;
+  font-size: 0.8125rem;
+}
+
+.tablaPagosModal tbody tr:hover {
+  background: #fafafa;
+}
+
+.text-success {
+  color: #000000;
+  font-weight: 600;
+}
+
+.sinPagosModal {
+  text-align: center;
+  padding: 1.5rem 1.25rem;
+  color: #666666;
+}
+
+.sinPagosModal .icono {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #f5f5f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: #999999;
+}
+
+/* ============================================================================
+   MODAL EDITAR CLIENTE - VERTICAL
+   ============================================================================ */
+.readonly-input {
+  background: #f5f5f5 !important;
+  color: #666666 !important;
+  cursor: not-allowed !important;
+  border-color: #e0e0e0 !important;
+  font-weight: 600;
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.previewCalculoEditar {
+  background: #ffffff;
+  border-radius: 0.375rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #000000;
+  animation: fadeIn 0.3s ease;
+}
+
+.previewCalculoEditar h4 {
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+@media (min-width: 640px) {
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+}
+
+/* ============================================================================
+   MODAL ABONO INTERESES - VERTICAL
+   ============================================================================ */
+.modal-abono-simplificado {
+  max-width: 500px;
+}
+
+.info-cliente-abono {
+  background: #f5f5f5;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #000000;
+}
+
+.info-resumen-abono {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .info-resumen-abono {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.info-item-abono {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-item-abono:last-child {
+  border-bottom: none;
+}
+
+.info-item-abono.destacado {
+  background: #ffffff;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin: 0.25rem 0;
+  border: 1px solid #e0e0e0;
+}
+
+.info-item-abono .label {
+  font-weight: 500;
+  color: #666666;
+  font-size: 0.8125rem;
+}
+
+.info-item-abono .value {
+  font-weight: 600;
+  color: #000000;
+  font-size: 0.875rem;
+}
+
+.info-item-abono .value.text-danger {
+  color: #dc3545;
+}
+
+.form-abono-simplificado {
+  padding: 0.625rem 0;
+}
+
+.seccion-tipo-calculo {
+  margin-bottom: 1.5rem;
+}
+
+.seccion-tipo-calculo h3 {
+  margin-bottom: 1rem;
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.opciones-calculo-intereses {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.opcion-calculo {
+  display: flex;
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  border: none;
+}
+
+.opcion-calculo:hover {
+  border-color: #000000;
+  background: #f5f5f5;
+}
+
+.opcion-calculo.active {
+  border-color: #000000;
+  background-color: #f5f5f5;
+}
+
+.info-opcion {
+  flex: 1;
+}
+
+.info-opcion strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #000000;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.info-opcion p {
+  margin: 0;
+  color: #666666;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.icono-opcion {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #f5f5f5;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  color: #666666;
+}
+
+.monto-opcion,
+.texto-opcion {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: #000000;
+  background: #f5f5f5;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  border: 1px solid #e0e0e0;
+}
+
+.texto-opcion {
+  color: #666666;
+  background: #f0f0f0;
+}
+
+/* Sección de cálculo diario vertical */
+.seccion-calculo-diario {
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.seccion-calculo-diario h4 {
+  margin-bottom: 1rem;
+  color: #000000;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.info-calculo-diario {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 0.375rem;
+  border: 1px solid #e0e0e0;
+}
+
+.item-info-calculo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.item-info-calculo:last-child {
+  border-bottom: none;
+}
+
+.item-info-calculo span {
+  font-size: 0.8125rem;
+  color: #666666;
+}
+
+.item-info-calculo strong {
+  font-size: 0.875rem;
+  color: #000000;
+  font-weight: 600;
+}
+
+/* Input con botones para días rápidos vertical */
+.input-con-botones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input-dias-interes {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  color: #000000;
+  background: #ffffff;
+}
+
+.input-dias-interes:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.botones-dias-rapidos {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-dia-rapido {
+  padding: 0.5rem 0.75rem;
+  background: #ffffff;
+  color: #666666;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 80px;
+}
+
+.btn-dia-rapido:hover {
+  background: #f5f5f5;
+  border-color: #000000;
+  color: #000000;
+}
+
+/* Monto calculado */
+.monto-calculado {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.monto-resultado {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 0.5rem;
+}
+
+.monto-calculado small {
+  display: block;
+  color: #666666;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* Formulario vertical */
+.form-group-abono {
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.form-group-abono label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #666666;
+  font-size: 0.8125rem;
+}
+
+.form-group-abono input,
+.form-group-abono textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+  background: #ffffff;
+  color: #000000;
+  font-family: inherit;
+}
+
+.form-group-abono input:focus,
+.form-group-abono textarea:focus {
+  outline: none;
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.input-monto-abono {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000000;
+  text-align: center;
+  background: #f5f5f5;
+}
+
+.textarea-observaciones {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.resumen-abono-final {
+  background: #f5f5f5;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+  border: 1px solid #e0e0e0;
+  border-top: 2px solid #000000;
+}
+
+.resumen-abono-final h4 {
+  margin-bottom: 1rem;
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.detalles-resumen-abono {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  text-align: center;
+}
+
+.item-resumen-abono {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item-resumen-abono span {
+  font-size: 0.75rem;
+  color: #666666;
+}
+
+.item-resumen-abono strong {
+  font-size: 0.875rem;
+  color: #000000;
+  font-weight: 600;
+}
+
+.monto-final-abono {
+  color: #000000 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+.btn-abonar {
+  width: 100%;
+  padding: 0.875rem;
+  background: #000000;
+  color: white;
+  border: 1px solid #000000;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-abonar:hover:not(:disabled) {
+  background: #333333;
+  border-color: #333333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-abonar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #666666;
+  border-color: #666666;
+}
+
+/* ============================================================================
+   FECHA PAGO DETALLE
+   ============================================================================ */
+.fecha-pago-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.fecha-principal {
+  font-weight: 500;
+}
+
+.hora-pago small {
+  color: #666666;
+  font-size: 0.75rem;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* ============================================================================
+   INFORMACIÓN DE FILTRO POR FECHA
+   ============================================================================ */
+.info-filtro-fecha {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  border-left: 4px solid #000000;
+}
+
+.icono-info-filtro {
+  color: #000000;
+  background: #ffffff;
+  padding: 0.5rem;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.info-filtro-fecha p {
+  margin: 0;
+  color: #000000;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.info-filtro-fecha strong {
+  color: #000000;
+  margin-right: 0.5rem;
+}
+
+.clientes-destacados {
+  display: block;
+  margin-top: 0.25rem;
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.contador-filtro {
+  margin-left: 0.5rem;
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+/* ============================================================================
+   DESTACADO POR FILTRO
+   ============================================================================ */
+.destacado-filtro {
+  position: relative;
+  border: 2px solid #000000 !important;
+  background: #fafafa;
+}
+
+.badge-filtro-fecha {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #000000;
+  color: #ffffff;
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  z-index: 10;
+}
+
+.badge-filtro-fecha svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.icono-destacado {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+.icono-destacado svg {
+  color: #ffffff !important;
+}
+
+.info-prestamo-fecha {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 0.375rem;
+  border-left: 3px solid #000000;
+}
+
+.monto-prestamo-filtro {
+  font-size: 0.8125rem;
+  color: #000000;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.dia-pago-filtro {
+  font-size: 0.8125rem;
+  color: #666666;
+  font-weight: 500;
+  display: block;
+}
+
+/* ============================================================================
+   UTILIDADES
+   ============================================================================ */
+.observaciones-text {
+  font-style: italic;
+  color: #666666;
+  background: #f8f9fa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border-left: 3px solid #e0e0e0;
+}
+
+.full-width {
+  width: 100%;
+  min-width: 100%;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+/* Estilos para cliente seleccionado con scroll */
+.cliente-seleccionado {
+  animation: highlight 2s ease;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes highlight {
+  0% {
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* ============================================================================
+   ANIMACIONES ESPECÍFICAS PARA PAGOS
+   ============================================================================ */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+.pago-success-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pago-form-animation {
+  animation: slideInRight 0.4s ease-out;
+}
+
+/* ============================================================================
+   UTILIDADES PARA PAGOS
+   ============================================================================ */
+.text-currency {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.bg-success-light {
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+}
+
+.bg-warning-light {
+  background: linear-gradient(135deg, #fff3e0 0%, #fff8e1 100%);
+}
+
+.bg-danger-light {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+}
+
+.border-success {
+  border-color: #4caf50 !important;
+}
+
+.border-warning {
+  border-color: #ff9800 !important;
+}
+
+.border-danger {
+  border-color: #f44336 !important;
+}
+
+/* Indicador de estado */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.status-indicator.on-time {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.status-indicator.late {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffe0b2;
+}
+
+.status-indicator.overdue {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.status-indicator-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.on-time .status-indicator-dot {
+  background: #4caf50;
+}
+
+.status-indicator.late .status-indicator-dot {
+  background: #ff9800;
+}
+
+.status-indicator.overdue .status-indicator-dot {
+  background: #f44336;
+}
+
+/* Tooltips para información */
+.pago-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: #e0e0e0;
+  border-radius: 50%;
+  color: #666666;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: help;
+  margin-left: 0.5rem;
+}
+
+.pago-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000000;
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pago-tooltip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 0.375rem solid transparent;
+  border-top-color: #000000;
+  margin-bottom: -0.125rem;
+  z-index: 1000;
+}
+
+/* ============================================================================
+   RESPONSIVE ADICIONAL
+   ============================================================================ */
+@media (max-width: 480px) {
+  .sectionTop {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .optionsMain h2 {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  main {
+    padding: 1rem;
+  }
+  
+  .statCard {
+    padding: 1.25rem;
+  }
+  
+  .statCard h1 {
+    font-size: 1.25rem;
+  }
+  
+  .listaPrestamosActivos,
+  .listaClientes,
+  .detallesPrestamos {
+    padding: 1.25rem;
+  }
+  
+  .prestamoCard,
+  .clienteCard {
+    padding: 1.25rem;
+  }
+  
+  .prestamoDetalles span {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .btn-pago,
+  .btn-mora,
+  .delete-btn,
+  .btn-editar,
+  .btn-abono {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+  
+  .modalContent {
+    margin: 1rem;
+  }
+  
+  .searchBar {
+    height: 2.5rem;
+  }
+  
+  .filterButton {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .buscador-clientes-dia {
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+  
+  .search-day-input {
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+  }
+  
+  .search-icon-container {
+    left: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .resumenStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .clienteDetalles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .resumenStats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .resumenStats {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE PARA FORMULARIO DE PAGO
+   ============================================================================ */
+@media (max-width: 640px) {
+  .cliente-info-pago {
+    padding: 1.25rem;
+  }
+  
+  .cliente-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .pago-input-section {
+    padding: 1.25rem;
+  }
+  
+  .pago-input {
+    padding: 0.875rem 1rem;
+    height: 3rem;
+  }
+  
+  .pago-input.amount-input {
+    font-size: 1.25rem;
+  }
+  
+  .pago-submit-button {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .quick-amount-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .info-prestamo-grid {
+    gap: 0.75rem;
+  }
+  
+  .info-prestamo-item {
+    padding: 0.875rem;
+  }
+  
+  .info-prestamo-value {
+    font-size: 1rem;
+  }
+  
+  .pago-form-grid {
+    gap: 1rem;
+  }
+  
+  .pago-resumen {
+    padding: 1.25rem;
+  }
+  
+  .pago-resumen-item.total .pago-resumen-value {
+    font-size: 1.125rem;
+  }
+}
+
+/* ============================================================================
    ANIMACIONES
    ============================================================================ */
 @keyframes fadeIn {
@@ -2168,2259 +4096,4 @@ main {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* ============================================================================
-   UTILITARIOS
-   ============================================================================ */
-.refresh-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  margin-left: 0.5rem;
-  border-radius: 0.25rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #666666;
-  transition: all 0.2s;
-  font-size: 0.75rem;
-}
-
-.refresh-btn:hover {
-  background: #f5f5f5;
-  color: #000000;
-}
-
-.refresh-btn svg {
-  width: 0.875rem;
-  height: 0.875rem;
-  margin-right: 0.25rem;
-}
-
-/* ============================================================================
-   RESPONSIVE ADICIONAL
-   ============================================================================ */
-@media (max-width: 480px) {
-  .sectionTop {
-    padding: 1rem;
-    gap: 1rem;
-  }
-  
-  .optionsMain h2 {
-    padding: 0.75rem;
-    font-size: 0.8125rem;
-  }
-  
-  main {
-    padding: 1rem;
-  }
-  
-  .statCard {
-    padding: 1.25rem;
-  }
-  
-  .statCard h1 {
-    font-size: 1.25rem;
-  }
-  
-  .listaPrestamosActivos,
-  .listaClientes,
-  .detallesPrestamos {
-    padding: 1.25rem;
-  }
-  
-  .prestamoCard,
-  .clienteCard {
-    padding: 1.25rem;
-  }
-  
-  .prestamoDetalles span {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-  }
-  
-  .btn-pago,
-  .btn-mora,
-  .delete-btn {
-    padding: 0.75rem 1rem;
-    font-size: 0.8125rem;
-  }
-  
-  .modalContent {
-    margin: 1rem;
-  }
-  
-  .searchBar {
-    height: 2.5rem;
-  }
-  
-  .filterButton {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.75rem;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1024px) {
-  .resumenStats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .clienteDetalles {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .resumenStats {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1280px) {
-  .resumenStats {
-    grid-template-columns: repeat(6, 1fr);
-  }
-}
-
-/* ========================================
-   NUEVOS ESTILOS PARA LAS FUNCIONALIDADES
-   ======================================== */
-
-/* Filtro por fecha */
-.filtro-fecha-container {
-  background: #ffffff;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  border: 1px solid #e0e0e0;
-}
-
-.filtro-fecha-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.filtro-fecha-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  color: #000000;
-  font-weight: 600;
-}
-
-.btn-limpiar-filtros {
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-limpiar-filtros:hover {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-.filtro-fecha-inputs {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-}
-
-.input-group {
-  flex: 1;
-}
-
-.input-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  color: #666666;
-  font-weight: 500;
-}
-
-.input-fecha {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  transition: border-color 0.2s;
-  background: #ffffff;
-  color: #000000;
-}
-
-.input-fecha:focus {
-  outline: none;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-}
-
-.btn-filtrar-fecha {
-  background: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  height: 46px;
-  transition: background-color 0.2s;
-}
-
-.btn-filtrar-fecha:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-}
-
-.btn-filtrar-fecha:disabled {
-  background: #cccccc;
-  border-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.filtro-activo-info {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
-  background: #f5f5f5;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-}
-
-/* Botones nuevos en las tarjetas */
-.clienteAcciones {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
-.btn-editar {
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.btn-editar:hover {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-.btn-abono {
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.btn-abono:hover {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-.btn-pago {
-  background: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.btn-pago:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-}
-
-.btn-pago:disabled {
-  background: #cccccc;
-  border-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.btn-mora {
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.btn-mora:hover {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-.delete-btn {
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.delete-btn:hover {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-/* Botones en prestamos */
-.prestamoAcciones {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.accionesPrestamo {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-pago-detalle {
-  background: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-pago-detalle:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-}
-
-.btn-pago-detalle:disabled {
-  background: #cccccc;
-  border-color: #cccccc;
-  cursor: not-allowed;
-}
-
-/* Estilos para textarea y select */
-textarea, select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-family: inherit;
-  resize: vertical;
-  transition: border-color 0.2s;
-  background: #ffffff;
-  color: #000000;
-}
-
-textarea:focus, select:focus {
-  outline: none;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Información de próximo pago */
-.proximo-pago {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
-  color: #666666;
-  margin-top: 0.5rem;
-}
-
-.proximo-pago .icon {
-  width: 1rem;
-  height: 1rem;
-  color: #666666;
-}
-
-/* Campos de detalle cliente */
-.full-width {
-  grid-column: 1 / -1;
-}
-
-.observaciones-text {
-  font-style: italic;
-  color: #666666;
-  background: #f8f9fa;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  border-left: 3px solid #e0e0e0;
-}
-
-/* Info abono */
-.info-abono {
-  display: flex;
-  gap: 1.25rem;
-  margin-top: 0.75rem;
-}
-
-.info-abono p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #666666;
-}
-
-.info-abono strong {
-  color: #000000;
-  font-weight: 600;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .filtro-fecha-inputs {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .btn-filtrar-fecha {
-    width: 100%;
-  }
-  
-  .clienteAcciones {
-    flex-direction: column;
-  }
-  
-  .clienteAcciones button {
-    width: 100%;
-  }
-  
-  .accionesPrestamo {
-    flex-wrap: wrap;
-  }
-  
-  .info-abono {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-}
-
-/* Estilos para el botón de búsqueda por fecha */
-.busqueda-fecha-container {
-  margin-left: auto;
-  margin-right: 20px;
-}
-
-.btn-buscar-fecha {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: #000000;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-buscar-fecha:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  background: #333333;
-}
-
-.btn-buscar-fecha svg {
-  stroke: white;
-}
-
-/* Estilos para el modal de búsqueda */
-.modal-busqueda-fecha {
-  max-width: 500px;
-}
-
-.busqueda-fecha-form {
-  padding: 20px 0;
-}
-
-.info-busqueda {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.info-busqueda .icono-info {
-  color: #666666;
-  flex-shrink: 0;
-}
-
-.info-busqueda p {
-  margin: 0;
-  color: #666666;
-  line-height: 1.5;
-}
-
-.input-fecha-busqueda {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  margin-bottom: 20px;
-}
-
-.input-fecha-busqueda:focus {
-  outline: none;
-  border-color: #000000;
-}
-
-.acciones-busqueda {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.search-btn {
-  flex: 1;
-  padding: 12px;
-  background: #000000;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.search-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #999999;
-}
-
-.cancel-btn {
-  flex: 1;
-  padding: 12px;
-  background: #f5f5f5;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.preview-busqueda {
-  margin-top: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  border-left: 4px solid #000000;
-}
-
-.preview-busqueda p {
-  margin: 0;
-  color: #000000;
-}
-
-.spinner.mini {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-  display: inline-block;
-  margin-right: 8px;
-}
-
-/* Estilos para el indicador de búsqueda */
-.indicador-busqueda-activa {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin: 20px;
-  padding: 15px;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.indicador-content {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.indicador-icono {
-  color: #000000;
-  background: white;
-  padding: 8px;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.indicador-texto {
-  flex: 1;
-  font-size: 14px;
-}
-
-.indicador-texto strong {
-  color: #000000;
-  margin-right: 8px;
-}
-
-.indicador-contador {
-  margin-left: 10px;
-  background: #000000;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.indicador-cerrar {
-  background: none;
-  border: none;
-  color: #666666;
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.indicador-cerrar:hover {
-  background: #f5f5f5;
-  color: #000000;
-}
-
-/* Estilos para el botón de limpiar búsqueda */
-.btn-limpiar-busqueda {
-  margin-left: 10px;
-  padding: 8px 15px;
-  background: #f5f5f5;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.2s;
-}
-
-.btn-limpiar-busqueda:hover {
-  background: #f0f0f0;
-  border-color: #cccccc;
-}
-
-/* Contenedor para la búsqueda por fecha */
-.busqueda-fecha-container {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  gap: 10px;
-}
-
-/* Modal de búsqueda por fecha específico */
-.modal-busqueda-fecha .modalContent {
-  max-width: 500px;
-}
-
-.busqueda-fecha-form {
-  padding: 20px 0;
-}
-
-.info-busqueda {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.info-busqueda .icono-info {
-  color: #000000;
-  background: white;
-  padding: 10px;
-  border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.info-busqueda p {
-  margin: 0;
-  color: #666666;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.input-fecha-busqueda {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s;
-}
-
-.input-fecha-busqueda:focus {
-  border-color: #000000;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
-  outline: none;
-}
-
-.preview-busqueda {
-  margin-top: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  border-left: 4px solid #000000;
-}
-
-.preview-busqueda p {
-  margin: 0;
-  color: #000000;
-}
-
-.acciones-busqueda {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.search-btn {
-  background: #000000;
-  color: white;
-  border: none;
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.search-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  background: #333333;
-}
-
-.search-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #999999;
-}
-
-.spinner.mini {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-}
-
-/* Estilos para clientes destacados por filtro */
-.destacado-filtro {
-  position: relative;
-  border: 2px solid #000000 !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  background: #f5f5f5;
-}
-
-.badge-filtro-fecha {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #000000;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 10;
-}
-
-.icono-destacado {
-  background: #000000 !important;
-  color: white !important;
-}
-
-/* Información del préstamo encontrado */
-.info-prestamo-fecha {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  border-left: 3px solid #000000;
-}
-
-.monto-prestamo-filtro {
-  font-size: 13px;
-  color: #000000;
-}
-
-.detalle-prestamo-filtro {
-  color: #000000;
-  font-weight: 500;
-}
-
-/* Información del filtro activo */
-.info-filtro-fecha {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin: 15px 0;
-  border-left: 4px solid #000000;
-}
-
-.icono-info-filtro {
-  color: #000000;
-  background: white;
-  padding: 8px;
-  border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.info-filtro-fecha p {
-  margin: 0;
-  color: #000000;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.clientes-destacados {
-  display: block;
-  margin-top: 5px;
-  color: #000000;
-  font-weight: 600;
-}
-
-.contador-filtro {
-  margin-left: 10px;
-  color: #000000;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-/* Estilo para elementos destacados en detalles */
-.destacado {
-  background: #f5f5f5;
-  border-radius: 6px;
-  padding: 10px;
-  border-left: 3px solid #000000;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .busqueda-fecha-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .btn-limpiar-busqueda {
-    margin-left: 0;
-    margin-top: 5px;
-  }
-  
-  .indicador-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .indicador-cerrar {
-    align-self: flex-end;
-  }
-  
-  .badge-filtro-fecha {
-    position: relative;
-    top: 0;
-    right: 0;
-    margin-bottom: 10px;
-    align-self: flex-start;
-  }
-}
-
-/* ============================================================================
-   MODAL DE ABONO DE INTERESES SIMPLIFICADO
-   ============================================================================ */
-.modal-abono-simplificado {
-  max-width: 600px;
-  width: 95%;
-  background: #ffffff;
-  border-radius: 0.5rem;
-  animation: slideIn 0.3s ease;
-  border: 1px solid #e0e0e0;
-}
-
-/* Header del modal */
-.modal-abono-simplificado .modalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
-  background: #ffffff;
-  position: sticky;
-  top: 0;
-}
-
-.modal-abono-simplificado .modalHeader h2 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #000000;
-  flex: 1;
-}
-
-.modal-abono-simplificado .modalHeader p {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: #666666;
-}
-
-.modal-abono-simplificado .closeButton {
-  background: transparent;
-  border: none;
-  color: #666666;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.25rem;
-  transition: all 0.2s ease;
-  margin-left: 1rem;
-  flex-shrink: 0;
-}
-
-.modal-abono-simplificado .closeButton:hover {
-  background: #f5f5f5;
-  color: #000000;
-}
-
-/* Body del modal */
-.modal-abono-simplificado .modalBody {
-  padding: 1.5rem;
-}
-
-/* Información del cliente */
-.info-cliente-abono {
-  background: #f5f5f5;
-  border-radius: 0.375rem;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e0e0e0;
-  border-left: 4px solid #000000;
-}
-
-.info-resumen-abono {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-@media (min-width: 640px) {
-  .info-resumen-abono {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-}
-
-.info-item-abono {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.info-item-abono:last-child {
-  border-bottom: none;
-}
-
-.info-item-abono.destacado {
-  background: #ffffff;
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  margin: 0.25rem -0.5rem;
-  border: 1px solid #e0e0e0;
-}
-
-.info-item-abono .label {
-  font-weight: 500;
-  color: #666666;
-  font-size: 0.8125rem;
-}
-
-.info-item-abono .value {
-  font-weight: 600;
-  color: #000000;
-  font-size: 0.875rem;
-}
-
-.info-item-abono .value.text-danger {
-  color: #dc3545;
-}
-
-/* Formulario simplificado */
-.form-abono-simplificado {
-  padding: 0.625rem 0;
-}
-
-.seccion-tipo-abono-simplificado h3 {
-  margin-bottom: 1rem;
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.opciones-abono-intereses {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 480px) {
-  .opciones-abono-intereses {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.opcion-abono {
-  display: flex;
-  align-items: flex-start;
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  width: 100%;
-}
-
-.opcion-abono:hover {
-  border-color: #000000;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.opcion-abono.active {
-  border-color: #000000;
-  background-color: #f5f5f5;
-}
-
-.icono-opcion {
-  font-size: 1.75rem;
-  margin-right: 0.75rem;
-  flex-shrink: 0;
-  color: #666666;
-}
-
-.info-opcion {
-  flex: 1;
-}
-
-.info-opcion strong {
-  display: block;
-  margin-bottom: 0.25rem;
-  color: #000000;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.info-opcion p {
-  margin: 0;
-  color: #666666;
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-
-.monto-opcion {
-  display: inline-block;
-  margin-top: 0.5rem;
-  font-weight: 600;
-  color: #000000;
-  background: #f5f5f5;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  border: 1px solid #e0e0e0;
-}
-
-.monto-opcion.text-danger {
-  color: #dc3545;
-  background: #f8d7da;
-  border-color: #f5c6cb;
-}
-
-/* Formulario */
-.form-row-abono {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .form-row-abono {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.form-group-abono {
-  margin-bottom: 1rem;
-}
-
-.form-group-abono label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #666666;
-  font-size: 0.8125rem;
-}
-
-.form-group-abono input,
-.form-group-abono textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  transition: border-color 0.2s;
-  background: #ffffff;
-  color: #000000;
-  font-family: inherit;
-}
-
-.form-group-abono input:focus,
-.form-group-abono textarea:focus {
-  outline: none;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-}
-
-.input-monto-abono {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #000000;
-  text-align: center;
-  background: #f5f5f5;
-}
-
-.textarea-observaciones {
-  min-height: 80px;
-  resize: vertical;
-}
-
-/* Resumen final */
-.resumen-abono-final {
-  background: #f5f5f5;
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  margin: 1.5rem 0;
-  border: 1px solid #e0e0e0;
-  border-top: 2px solid #000000;
-}
-
-.resumen-abono-final h4 {
-  margin-bottom: 1rem;
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: center;
-}
-
-.detalles-resumen-abono {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  text-align: center;
-}
-
-@media (min-width: 480px) {
-  .detalles-resumen-abono {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.item-resumen-abono {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.item-resumen-abono span {
-  font-size: 0.75rem;
-  color: #666666;
-}
-
-.item-resumen-abono strong {
-  font-size: 0.875rem;
-  color: #000000;
-  font-weight: 600;
-}
-
-.monto-final-abono {
-  color: #000000 !important;
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-}
-
-/* Botón de abono */
-.btn-abonar {
-  width: 100%;
-  padding: 0.875rem;
-  background: #000000;
-  color: white;
-  border: 1px solid #000000;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-.btn-abonar:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.btn-abonar:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #666666;
-  border-color: #666666;
-}
-
-.icono-abonar {
-  font-size: 1rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .modal-abono-simplificado {
-    width: calc(100% - 2rem);
-    margin: 1rem;
-  }
-  
-  .opciones-abono-intereses {
-    grid-template-columns: 1fr;
-  }
-  
-  .detalles-resumen-abono {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-abono-simplificado .modalBody {
-    padding: 1rem;
-  }
-  
-  .form-row-abono {
-    grid-template-columns: 1fr;
-  }
-  
-  .info-cliente-abono {
-    padding: 1rem;
-  }
-}
-
-/* ============================================================================
-   MODAL NUEVO CLIENTE - INPUTS VERTICALES
-   ============================================================================ */
-
-/* Formulario del modal de nuevo cliente - Inputs en vertical */
-.modalContent .clienteForm .seccionFormulario .formRow {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  width: 100%;
-}
-
-/* Aseguramos que cada grupo de formulario ocupe el 100% */
-.modalContent .clienteForm .seccionFormulario .formGroup {
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-/* Estilos específicos para los inputs del formulario de cliente */
-.modalContent .clienteForm .seccionFormulario input,
-.modalContent .clienteForm .seccionFormulario textarea,
-.modalContent .clienteForm .seccionFormulario select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: #000000;
-  background: #ffffff;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.modalContent .clienteForm .seccionFormulario input:focus,
-.modalContent .clienteForm .seccionFormulario textarea:focus,
-.modalContent .clienteForm .seccionFormulario select:focus {
-  outline: none;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-}
-
-.modalContent .clienteForm .seccionFormulario input:disabled,
-.modalContent .clienteForm .seccionFormulario textarea:disabled,
-.modalContent .clienteForm .seccionFormulario select:disabled {
-  background: #f5f5f5;
-  cursor: not-allowed;
-  color: #999999;
-}
-
-/* Etiquetas de los inputs */
-.modalContent .clienteForm .seccionFormulario .formGroup label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.8125rem;
-  color: #666666;
-  font-weight: 500;
-  width: 100%;
-}
-
-/* Textarea específico */
-.modalContent .clienteForm .seccionFormulario textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-/* Estilos para el preview de cálculo - mantener estructura original */
-.previewCalculo {
-  background: #f5f5f5;
-  border-radius: 0.25rem;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border: 1px solid #e0e0e0;
-  width: 100%;
-}
-
-.previewCalculo h4 {
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-  width: 100%;
-}
-
-.gridCalculo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .gridCalculo {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-}
-
-/* Botón de guardar */
-.modalContent .clienteForm .saveButton {
-  width: 100%;
-  background: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
-  padding: 0.875rem;
-  border-radius: 0.25rem;
-  font-size: 0.9375rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.modalContent .clienteForm .saveButton:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-}
-
-.modalContent .clienteForm .saveButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Spinner dentro del botón */
-.modalContent .clienteForm .saveButton .spinner {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #ffffff;
-  animation: spin 1s linear infinite;
-}
-
-/* Responsive - mantener disposición vertical en todos los tamaños */
-@media (min-width: 640px) {
-  .modalContent .clienteForm .seccionFormulario .formRow {
-    /* Seguimos manteniendo columna única en todos los tamaños */
-    flex-direction: column;
-  }
-}
-
-@media (min-width: 768px) {
-  .modalContent .clienteForm .seccionFormulario .formRow {
-    /* Seguimos manteniendo columna única en desktop */
-    flex-direction: column;
-  }
-}
-
-/* Aseguramos que el contenedor del modal sea responsivo */
-.modalContent {
-  max-width: 600px;
-  width: 95%;
-}
-
-/* Ajustamos el padding para mejor visualización */
-.modalContent .modalBody {
-  padding: 1.5rem;
-}
-
-/* Mejoramos el espaciado entre secciones */
-.modalContent .clienteForm .seccionFormulario {
-  margin-bottom: 2rem;
-}
-
-.modalContent .clienteForm .seccionFormulario h3 {
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-/* ============================================================================
-   MODAL REGISTRAR PAGO - INPUTS VERTICALES
-   ============================================================================ */
-
-/* Formulario de pago - Inputs en vertical */
-.modalContent .pagoForm .formRow {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  width: 100%;
-}
-
-/* Aseguramos que cada grupo de formulario ocupe el 100% */
-.modalContent .pagoForm .formGroup {
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-/* Estilos específicos para los inputs del formulario de pago */
-.modalContent .pagoForm input,
-.modalContent .pagoForm textarea,
-.modalContent .pagoForm select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: #000000;
-  background: #ffffff;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.modalContent .pagoForm input:focus,
-.modalContent .pagoForm textarea:focus,
-.modalContent .pagoForm select:focus {
-  outline: none;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
-}
-
-.modalContent .pagoForm input:disabled,
-.modalContent .pagoForm textarea:disabled,
-.modalContent .pagoForm select:disabled {
-  background: #f5f5f5;
-  cursor: not-allowed;
-  color: #999999;
-}
-
-/* Etiquetas de los inputs */
-.modalContent .pagoForm .formGroup label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.8125rem;
-  color: #666666;
-  font-weight: 500;
-  width: 100%;
-}
-
-/* Textarea específico */
-.modalContent .pagoForm textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-/* Botón de guardar en pago */
-.modalContent .pagoForm .saveButton {
-  width: 100%;
-  background: #000000;
-  color: #ffffff;
-  border: 1px solid #000000;
-  padding: 0.875rem;
-  border-radius: 0.25rem;
-  font-size: 0.9375rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.modalContent .pagoForm .saveButton:hover:not(:disabled) {
-  background: #333333;
-  border-color: #333333;
-}
-
-.modalContent .pagoForm .saveButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Responsive - mantener disposición vertical en todos los tamaños */
-@media (min-width: 640px) {
-  .modalContent .pagoForm .formRow {
-    /* Seguimos manteniendo columna única en todos los tamaños */
-    flex-direction: column;
-  }
-}
-
-@media (min-width: 768px) {
-  .modalContent .pagoForm .formRow {
-    /* Seguimos manteniendo columna única en desktop */
-    flex-direction: column;
-  }
-}
-
-/* Estilos para la tabla de historial de pagos en el modal */
-.tablaPagosModal {
-  overflow-x: auto;
-  background: #ffffff;
-  border-radius: 0.25rem;
-  border: 1px solid #e0e0e0;
-}
-
-.tablaPagosModal table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 500px;
-}
-
-.tablaPagosModal th {
-  background: #f5f5f5;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: #666666;
-  font-size: 0.6875rem;
-  border-bottom: 1px solid #e0e0e0;
-  white-space: nowrap;
-}
-
-.tablaPagosModal td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f0f0f0;
-  color: #000000;
-  font-size: 0.8125rem;
-}
-
-.tablaPagosModal tbody tr:hover {
-  background: #fafafa;
-}
-
-/* Badge para método de pago */
-.badgeMetodo {
-  background: #f0f0f0;
-  color: #000000;
-  padding: 0.25rem 0.625rem;
-  border-radius: 0.75rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  border: 1px solid #e0e0e0;
-}
-
-/* Sin pagos en el modal */
-.sinPagosModal {
-  text-align: center;
-  padding: 1.5rem 1.25rem;
-  color: #666666;
-}
-
-.sinPagosModal .icono {
-  width: 2.5rem;
-  height: 2.5rem;
-  background: #f5f5f5;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-  color: #999999;
-}
-
-/* Información del cliente en modal de pago */
-.infoCliente {
-  background: #f5f5f5;
-  border-radius: 0.25rem;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e0e0e0;
-}
-
-.infoRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-@media (min-width: 640px) {
-  .infoRow {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-}
-
-.infoRow:last-child {
-  border-bottom: none;
-}
-
-.infoRow span {
-  color: #666666;
-  font-size: 0.8125rem;
-}
-
-.infoRow strong {
-  color: #000000;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-/* Historial de pagos en modal */
-.historialPagos {
-  margin-top: 1.875rem;
-  padding-top: 1.875rem;
-  border-top: 1px solid #e0e0e0;
-}
-
-.historialPagos h3 {
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-}
-
-.listaPagos {
-  margin-top: 1rem;
-}
-
-/* Texto de éxito en tabla */
-.text-success {
-  color: #000000;
-  font-weight: 600;
-}
-
-/* ============================================================================
-   ESTILOS PARA EL CÁLCULO DEL PRÉSTAMO - MANTENIENDO DISEÑO EXISTENTE
-   ============================================================================ */
-
-/* Contenedor principal del preview */
-.previewCalculo {
-  background: #ffffff;
-  border-radius: 0.375rem;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border: 1px solid #e0e0e0;
-  width: 100%;
-}
-
-.previewCalculo h4 {
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-  width: 100%;
-}
-
-/* Grid principal del cálculo */
-.gridCalculo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .gridCalculo {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
-}
-
-/* Columnas individuales */
-.columnaCalculo {
-  background: #ffffff;
-  border-radius: 0.25rem;
-  padding: 1.25rem;
-  border: 1px solid #e0e0e0;
-}
-
-/* Títulos de columnas */
-.columnaCalculo h5 {
-  background: #f5f5f5;
-  padding: 0.75rem 1rem;
-  margin: -1.25rem -1.25rem 1rem -1.25rem;
-  font-size: 0.8125rem;
-  color: #000000;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-/* Lista de cálculo */
-.listaCalculo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-/* Items individuales del cálculo */
-.itemCalculo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.itemCalculo:last-child {
-  border-bottom: none;
-}
-
-.itemCalculo span {
-  font-size: 0.8125rem;
-}
-
-.itemCalculo span:first-child {
-  color: #666666;
-}
-
-.itemCalculo span:last-child {
-  color: #000000;
-  font-weight: 600;
-}
-
-/* Item total destacado */
-.itemCalculo.total {
-  background: #f5f5f5;
-  padding: 1rem;
-  border-radius: 0.25rem;
-  margin-top: 0.5rem;
-}
-
-.itemCalculo.total span:first-child {
-  color: #000000;
-  font-weight: 600;
-}
-
-.itemCalculo.total span:last-child {
-  font-size: 0.9375rem;
-  color: #000000;
-}
-
-/* Responsive */
-@media (max-width: 767px) {
-  .previewCalculo {
-    padding: 1.25rem;
-  }
-  
-  .columnaCalculo {
-    padding: 1.25rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .previewCalculo {
-    padding: 1rem;
-  }
-  
-  .columnaCalculo {
-    padding: 1rem;
-  }
-  
-  .listaCalculo {
-    gap: 0.5rem;
-  }
-}
-
-/* ============================================================================
-   MODAL EDITAR CLIENTE - ESTILOS ESPECÍFICOS
-   ============================================================================ */
-
-/* Contenedor principal del modal de edición */
-.modalContent .clienteForm .form-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e0e0e0;
-  width: 100%;
-}
-
-@media (min-width: 640px) {
-  .modalContent .clienteForm .form-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-    gap: 1rem;
-  }
-}
-
-/* Estilos para el botón de cancelar */
-.modalContent .clienteForm .cancel-btn {
-  padding: 0.75rem 1.5rem;
-  background: #ffffff;
-  color: #666666;
-  border: 1px solid #e0e0e0;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-  text-align: center;
-  width: 100%;
-}
-
-@media (min-width: 640px) {
-  .modalContent .clienteForm .cancel-btn {
-    width: auto;
-    min-width: 120px;
-  }
-}
-
-.modalContent .clienteForm .cancel-btn:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #000000;
-  color: #000000;
-}
-
-.modalContent .clienteForm .cancel-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Estilos para campos de solo lectura */
-.readonly-input {
-  background: #f5f5f5 !important;
-  color: #666666 !important;
-  cursor: not-allowed !important;
-  border-color: #e0e0e0 !important;
-  font-weight: 600;
-}
-
-.readonly-input:focus {
-  border-color: #e0e0e0 !important;
-  box-shadow: none !important;
-}
-
-/* Texto de ayuda */
-.help-text {
-  display: block;
-  margin-top: 0.375rem;
-  font-size: 0.75rem;
-  color: #666666;
-  line-height: 1.4;
-}
-
-/* Preview del cálculo en edición */
-.previewCalculoEditar {
-  background: #ffffff;
-  border-radius: 0.375rem;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border: 1px solid #e0e0e0;
-  border-left: 4px solid #000000;
-  width: 100%;
-  animation: fadeIn 0.3s ease;
-}
-
-.previewCalculoEditar h4 {
-  color: #000000;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.25rem;
-  width: 100%;
-}
-
-/* Grid del cálculo en edición */
-.previewCalculoEditar .gridCalculo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .previewCalculoEditar .gridCalculo {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-}
-
-/* Columna del cálculo en edición */
-.previewCalculoEditar .columnaCalculo {
-  background: #ffffff;
-  border-radius: 0.25rem;
-  padding: 1.25rem;
-  border: 1px solid #e0e0e0;
-}
-
-.previewCalculoEditar .columnaCalculo h5 {
-  background: #f5f5f5;
-  padding: 0.75rem 1rem;
-  margin: -1.25rem -1.25rem 1rem -1.25rem;
-  font-size: 0.8125rem;
-  color: #000000;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-/* Lista de cálculo en edición */
-.previewCalculoEditar .listaCalculo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.previewCalculoEditar .itemCalculo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.previewCalculoEditar .itemCalculo:last-child {
-  border-bottom: none;
-}
-
-.previewCalculoEditar .itemCalculo span {
-  font-size: 0.8125rem;
-}
-
-.previewCalculoEditar .itemCalculo span:first-child {
-  color: #666666;
-}
-
-.previewCalculoEditar .itemCalculo span:last-child {
-  color: #000000;
-  font-weight: 600;
-}
-
-/* Item total destacado en edición */
-.previewCalculoEditar .itemCalculo.total {
-  background: #f5f5f5;
-  padding: 1rem;
-  border-radius: 0.25rem;
-  margin-top: 0.5rem;
-}
-
-.previewCalculoEditar .itemCalculo.total span:first-child {
-  color: #000000;
-  font-weight: 600;
-}
-
-.previewCalculoEditar .itemCalculo.total span:last-child {
-  font-size: 0.9375rem;
-  color: #000000;
-}
-
-.previewCalculoEditar .itemCalculo.total .text-success {
-  color: #000000 !important;
-}
-
-/* Animación para el cálculo */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Estilos para campos requeridos */
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="montoPrestamo"],
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="tasaInteres"],
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="numeroCuotas"] {
-  position: relative;
-  padding-right: 1rem;
-}
-
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="montoPrestamo"]::after,
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="tasaInteres"]::after,
-.modalContent .clienteForm .seccionFormulario .formGroup label[for*="numeroCuotas"]::after {
-  content: "*";
-  position: absolute;
-  right: 0;
-  color: #dc3545;
-  font-weight: bold;
-}
-
-/* Mejoras de accesibilidad para campos deshabilitados */
-.modalContent .clienteForm input:disabled,
-.modalContent .clienteForm textarea:disabled {
-  opacity: 0.7;
-}
-
-/* Estilos para el loader dentro del botón */
-.modalContent .clienteForm .saveButton .spinner {
-  width: 1.125rem;
-  height: 1.125rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #ffffff;
-  animation: spin 1s linear infinite;
-  margin-right: 0.5rem;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Estilos para mensajes de error específicos del modal */
-.modalContent .error-message {
-  background: #fff5f5;
-  color: #dc3545;
-  padding: 0.75rem 1rem;
-  border-radius: 0.375rem;
-  border: 1px solid #f5c6cb;
-  margin: 1rem 0;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  animation: slideIn 0.3s ease;
-}
-
-.modalContent .error-message .icon-container {
-  width: 1.25rem;
-  height: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #dc3545;
-}
-
-/* Estilos para grupos de formulario con error */
-.modalContent .clienteForm .formGroup.has-error input,
-.modalContent .clienteForm .formGroup.has-error textarea,
-.modalContent .clienteForm .formGroup.has-error select {
-  border-color: #dc3545;
-  background: #fff5f5;
-}
-
-.modalContent .clienteForm .formGroup.has-error input:focus,
-.modalContent .clienteForm .formGroup.has-error textarea:focus,
-.modalContent .clienteForm .formGroup.has-error select:focus {
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
-}
-
-/* Estilos para el contador de caracteres en textarea */
-.char-counter {
-  font-size: 0.75rem;
-  color: #666666;
-  text-align: right;
-  margin-top: 0.25rem;
-}
-
-.char-counter.warning {
-  color: #ffc107;
-}
-
-.char-counter.error {
-  color: #dc3545;
-}
-
-/* Estilos responsivos específicos para el modal de edición */
-@media (max-width: 639px) {
-  .modalContent .clienteForm .form-actions {
-    gap: 0.5rem;
-  }
-  
-  .modalContent .clienteForm .saveButton,
-  .modalContent .clienteForm .cancel-btn {
-    padding: 0.875rem;
-    font-size: 0.8125rem;
-  }
-  
-  .previewCalculoEditar {
-    padding: 1rem;
-  }
-  
-  .previewCalculoEditar .itemCalculo {
-    padding: 0.5rem 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .modalContent .clienteForm .seccionFormulario h3 {
-    font-size: 0.9375rem;
-  }
-  
-  .previewCalculoEditar h4 {
-    font-size: 0.9375rem;
-  }
-}
-
-/* Estilos para el estado de carga del modal */
-.modalContent.loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Estilos para el overlay del modal específico de edición */
-.modalOverlay.editing {
-  background: rgba(0, 0, 0, 0.7);
-}
-
-/* Estilos para el botón de guardar en estado de éxito */
-.modalContent .clienteForm .saveButton.success {
-  background: #28a745;
-  border-color: #28a745;
-}
-
-.modalContent .clienteForm .saveButton.success:hover {
-  background: #218838;
-  border-color: #1e7e34;
-}
-
-/* Transiciones suaves para los cambios de estado */
-.modalContent .clienteForm input,
-.modalContent .clienteForm textarea,
-.modalContent .clienteForm select {
-  transition: all 0.3s ease;
-}
-
-/* Efecto de hover para los campos editables */
-.modalContent .clienteForm input:not(:disabled):hover,
-.modalContent .clienteForm textarea:not(:disabled):hover,
-.modalContent .clienteForm select:not(:disabled):hover {
-  border-color: #999999;
-}
-
-/* Estilos para el focus state mejorado */
-.modalContent .clienteForm input:focus,
-.modalContent .clienteForm textarea:focus,
-.modalContent .clienteForm select:focus {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
